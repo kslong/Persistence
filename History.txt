@@ -1,0 +1,8 @@
+Archive of persistence on 110811 from /Users/long/WFC3/py_progs by long
+121220 - Cleaned up this directory so it contains only those routines
+that are part of the standard persistence subtraction S/W, associated
+evaluation tools,  and not calibration routines.  These have been moved
+to the directory cal
+130802 - Returned to working on a new version of the software.  This 
+is going to be Version2.1 of the software.  Put under git control at
+this time
