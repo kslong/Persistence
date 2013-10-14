@@ -4,16 +4,18 @@
 This is the python wrapper for the WFC3 IR Persistence software.
 '''
 
+from datetime import datetime
+from datetime import timedelta
+
 from pyql.logging.logging_functions import configure_logging
 from pyql.logging.logging_functions import log_info
 from pyql.logging.logging_functions import log_fail
 
-from datetime import datetime
-from datetime import timedelta
+from subprocess import PIPE
+from subprocess import Popen
+
 import logging
 import os
-import subprocess
-
 
 class Chdir(object):
     '''
@@ -38,7 +40,11 @@ def persistence_wrapper_main():
 
     # Run per_list.py
     logging.info('Running: python /grp/hst/wfc3a/persistence/code/per_list.py')
-    subprocess.call(['python','/grp/hst/wfc3a/persistence/code/per_list.py'])
+    child_process = Popen(['python','/grp/hst/wfc3a/persistence/code/per_list.py'],
+                         stdout=PIPE, bufsize=1)
+    for line in iter(child_process.stdout.readline, b''):
+        logging.info(line,)
+    child_process.communicate() 
     logging.info('per_list.py complete')
 
     # Run run_persist.py
@@ -49,9 +55,13 @@ def persistence_wrapper_main():
     logging_string += '/home/long/WFC3/corvina/py_progs/scripts/run_persist.py '
     logging_string += '-start {} -stop {}'.format(five_days_ago, today)
     logging.info(logging_string)
-    subprocess.call(['python', 
+    child_process = Popen(['python', 
                     '/home/long/WFC3/corvina/py_progs/scripts/run_persist.py',
-                    '-start', five_days_ago , '-stop', today])
+                    '-start', five_days_ago , '-stop', today], stdout=PIPE, 
+                    bufsize=1)
+    for line in iter(child_process.stdout.readline, b''):
+        logging.info(line,)
+    child_process.communicate() 
     logging.info('run_persist.py complete') 
 
 
