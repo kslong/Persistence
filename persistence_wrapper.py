@@ -38,10 +38,10 @@ def persistence_wrapper_main():
     foo = Chdir('/grp/hst/wfc3a/persistence/workspace')
     logging.info(os.getcwd())
 
-    code_ path = '/grp/hst/wfc3a/software_git/automated_scripts/cal_ir_make_persistence'
+    code_path = '/grp/hst/wfc3a/software_git/automated_scripts/cal_ir_make_persistence'
 
     # Run per_list.py
-    logging.info('Running: python {}'.format(os.path.join(code_path, 'per_list.py'))
+    logging.info('Running: python {}'.format(os.path.join(code_path, 'per_list.py')))
     child_process = Popen(['python', os.path.join(code_path, 'per_list.py')],
                          stdout=PIPE, bufsize=1)
     for line in iter(child_process.stdout.readline, b''):
