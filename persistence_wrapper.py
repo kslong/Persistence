@@ -66,6 +66,14 @@ def persistence_wrapper_main():
     child_process.communicate() 
     logging.info('run_persist.py complete')
 
+    # Run subtract_sum.py
+    logging.info('Running: {}'.format(os.path.join(code_path, 'subtract_sum.py')))
+    child_process = Popen(['python', os.path.join(code_path, 'subtract_sum.py')])
+    for line in iter(child_process.stdout.readline, b''):
+        logging.info(line,)
+    child_process.communicate()    
+    logging.info('subtract_sum.py complete')
+
 
 if __name__ == '__main__':
     configure_logging('persistence_wrapper')
