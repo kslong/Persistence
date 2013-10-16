@@ -38,9 +38,11 @@ def persistence_wrapper_main():
     foo = Chdir('/grp/hst/wfc3a/persistence/workspace')
     logging.info(os.getcwd())
 
+    code_ path = '/grp/hst/wfc3a/software_git/automated_scripts/cal_ir_make_persistence'
+
     # Run per_list.py
-    logging.info('Running: python /grp/hst/wfc3a/persistence/code/per_list.py')
-    child_process = Popen(['python','/grp/hst/wfc3a/persistence/code/per_list.py'],
+    logging.info('Running: python {}'.format(os.path.join(code_path, 'per_list.py'))
+    child_process = Popen(['python', os.path.join(code_path, 'per_list.py')],
                          stdout=PIPE, bufsize=1)
     for line in iter(child_process.stdout.readline, b''):
         logging.info(line,)
@@ -52,17 +54,17 @@ def persistence_wrapper_main():
     today = datetime.strftime((datetime.today()), '%Y-%m-%d')
     logging_string = 'Running: '
     logging_string += 'python '
-    logging_string += '/home/long/WFC3/corvina/py_progs/scripts/run_persist.py '
+    logging_string += '{} '.format(os.path.join(code_path, 'run_persist.py'))
     logging_string += '-start {} -stop {}'.format(five_days_ago, today)
     logging.info(logging_string)
     child_process = Popen(['python', 
-                    '/home/long/WFC3/corvina/py_progs/scripts/run_persist.py',
+                    os.path.join(code_path, 'run_persist.py'),
                     '-start', five_days_ago , '-stop', today], stdout=PIPE, 
                     bufsize=1)
     for line in iter(child_process.stdout.readline, b''):
         logging.info(line,)
     child_process.communicate() 
-    logging.info('run_persist.py complete') 
+    logging.info('run_persist.py complete')
 
 
 if __name__ == '__main__':
