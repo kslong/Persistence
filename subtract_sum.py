@@ -1,4 +1,4 @@
-#! /usr/bin/env python 
+#!/usr/bin/env python 
 
 '''
                     Space Telescope Science Institute
@@ -51,6 +51,11 @@ import per_list
 import numpy
 import html
 import pylab
+
+# Added so this can run in the background without a $DISPLAY 
+# environment variable.
+import matplotlib
+matplotlib.use('Agg')
 
 def link2file(link,word=''):
 	'''
