@@ -45,7 +45,8 @@ def persistence_wrapper_main():
     child_process = Popen(['python', os.path.join(code_path, 'per_list.py')],
                          stdout=PIPE, bufsize=1)
     for line in iter(child_process.stdout.readline, b''):
-        logging.info(line,)
+        print(line,)
+        #logging.info(line,)
     child_process.communicate() 
     logging.info('per_list.py complete')
 
