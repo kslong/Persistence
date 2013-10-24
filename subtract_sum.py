@@ -44,6 +44,12 @@ History:
 
 '''
 
+
+# Added so this can run in the background without a $DISPLAY 
+# environment variable.
+import matplotlib
+matplotlib.use('Agg')
+
 import sys
 import date
 import os
@@ -52,10 +58,6 @@ import numpy
 import html
 import pylab
 
-# Added so this can run in the background without a $DISPLAY 
-# environment variable.
-import matplotlib
-matplotlib.use('Agg')
 
 def link2file(link,word=''):
 	'''
@@ -66,9 +68,6 @@ def link2file(link,word=''):
 	
 	string='<a href="file:%s" > %s </a>'  % (link,word) 
 	return string
-
-
-
 
 
 def make_html(lines,filename='observations.html'):
