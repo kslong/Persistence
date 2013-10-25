@@ -51,7 +51,7 @@ def persistence_wrapper_main():
     logging.info('per_list.py complete')
 
     # Run run_persist.py
-    five_days_ago = datetime.strftime((datetime.today() - timedelta(days=5)), '%Y-%m-%d')
+    five_days_ago = datetime.strftime((datetime.today() - timedelta(days=7)), '%Y-%m-%d')
     today = datetime.strftime((datetime.today()), '%Y-%m-%d')
     logging_string = 'Running: '
     logging_string += 'python '
