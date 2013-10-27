@@ -38,7 +38,7 @@ def persistence_wrapper_main():
     foo = Chdir('/grp/hst/wfc3a/persistence/workspace')
     logging.info(os.getcwd())
 
-    code_path = '/grp/hst/wfc3a/software_git/automated_scripts/cal_ir_make_persistence'
+    code_path = '/home/viana/ql_code/automated_scripts/cal_ir_make_persistence'
 
     # Run per_list.py
     logging.info('Running: python {}'.format(os.path.join(code_path, 'per_list.py')))
@@ -77,5 +77,5 @@ def persistence_wrapper_main():
 
 
 if __name__ == '__main__':
-    configure_logging('persistence_wrapper')
+    configure_logging('cal_ir_make_persistence')
     persistence_wrapper_main()
