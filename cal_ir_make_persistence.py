@@ -70,8 +70,9 @@ def persistence_wrapper_main():
     # Run subtract_sum.py
     logging.info('Running: {}'.format(os.path.join(code_path, 'subtract_sum.py')))
     child_process = Popen(['python', os.path.join(code_path, 'subtract_sum.py')])
-    for line in iter(child_process.stdout.readline, b''):
-        logging.info(line,)
+    if child_process.stdout != None:
+        for line in iter(child_process.stdout.readline, b''):
+            logging.info(line,)
     child_process.communicate()    
     logging.info('subtract_sum.py complete')
 
