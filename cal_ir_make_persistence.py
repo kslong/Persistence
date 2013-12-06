@@ -35,7 +35,7 @@ def persistence_wrapper_main():
     '''
     The main controller.
     '''
-    foo = Chdir('/grp/hst/wfc3a/persistence/workspace')
+    foo = Chdir('/grp/hst/wfc3a/automated_outputs/cal_ir_make_persistence/workspace')
     logging.info(os.getcwd())
 
     code_path = '/home/wfc3qladm/ql_code/automated_scripts/cal_ir_make_persistence'
@@ -63,7 +63,7 @@ def persistence_wrapper_main():
                     '-start', five_days_ago , '-stop', today], stdout=PIPE, 
                     bufsize=1)
     for line in iter(child_process.stdout.readline, b''):
-        logging.info(line,)
+        logging.info(line.strip())
     child_process.communicate() 
     logging.info('run_persist.py complete')
 
@@ -72,7 +72,7 @@ def persistence_wrapper_main():
     child_process = Popen(['python', os.path.join(code_path, 'subtract_sum.py')])
     if child_process.stdout != None:
         for line in iter(child_process.stdout.readline, b''):
-            logging.info(line,)
+            logging.info(line.strip())
     child_process.communicate()    
     logging.info('subtract_sum.py complete')
 
