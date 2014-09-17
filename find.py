@@ -1,4 +1,4 @@
-#!/usr/bin/env python 
+#! /usr/bin/env python 
 
 '''
                     Space Telescope Science Institute
@@ -39,15 +39,18 @@ def find_best(filename='foo'):
 	Find the best version of a file, defined to be the one in
 	the current directory or the most recent one in any of the 
 	subdirectories.
+
+	This returns and empty string if nothing is found
 	'''
 
 	proc=subprocess.Popen('find . -follow -name %s -print ' % filename,shell=True,stdout=subprocess.PIPE)
 	# Before
 	lines=proc.stdout.readlines()
 	if len(lines)==0:
-			'Warning: find_best: No versions of %s found' % filename
+			print 'Warning: find_best: No versions of %s found' % filename
 			return ''
 	tbest=0
+	fbest=''
 	for line in lines:
 		fname=line.strip()
 		if fname.count('/') <= 1:

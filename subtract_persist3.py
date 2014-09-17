@@ -61,18 +61,9 @@ Other switches allow you to control the persistence function that is subtracted,
 		this file is multipled with the overall model
 -xynorm none -- Do not make a spatially dependent correction.
 
-Outputs:
-
-	See do_dataset
 	
 
 Primary routines:
-
-	The main routine is do_dataset which handles an individual dataset.  This is
-	the routine called by run_persist
-
-	If the routine is called from the command line, then the routine steer handles
-	the processing of command line switches and queueing up the datasets.
 
 Notes:
 									   
@@ -81,10 +72,6 @@ History:
 100603	ksl	Coding begun
 101014	ksl	Began adding capabilities to use this in a production-like
 		environment
-121220	ksl	Darks are not normally processed to e/s but are left in counts/s.
-		Modified so that all of the files have the same units as the file
-		to be analyzed, even though the base calculation of the model in
-		in e/s
 
 '''
 
@@ -316,21 +303,6 @@ def do_dataset(dataset='ia21h2e9q',norm=0.3,alpha=0.2,gamma=0.8,e_fermi=80000,kT
 		OK:  something
 		NOK: something
 
-	Outputs:
-		If there were IR observations that preceded the observation being analyzed
-		then this routines creates various fits files:
-			rootname_persist.fits  - The model for the total of internal and external persistnce
-			rootname_extper.fits   - The model for persistence from earlier visits, aka
-			                         external persistence
-			rootname_flt_cor.fits  - The corrected flt file
-			rootname_stim.fits     - The stimulus that caused the persistence
-			rootname_dt.fits       - The time at which the stimulus occurred
-		Plots of the various images are also created, as well as a log file for
-		the data set
-	Notes:
-		This is really the main routine of the program.  When run_persist.py calls this modeule. 
-		this is the routine that is called.
-
 	History
 
 	100905	ksl	Added disgnostic files to record the time of the stimulus and the
@@ -465,7 +437,6 @@ def do_dataset(dataset='ia21h2e9q',norm=0.3,alpha=0.2,gamma=0.8,e_fermi=80000,kT
 			history.write('%s\n' % xstring)
 			print xstring
 			return xstring
-
 		dq=get_image(record[0],3,fileref=science_record[0])     # Get the dq 
 		if len(dq)==0:
 			xstring = 'NOK: Problem with dq extension of %s' % record[0]
@@ -503,8 +474,7 @@ def do_dataset(dataset='ia21h2e9q',norm=0.3,alpha=0.2,gamma=0.8,e_fermi=80000,kT
 		history.write('subtract_persist: %7d pixels (or %6.3f percent) greater than 0.03 e/s\n' % (values[2],values[2]*100./values[0]))
 		history.write('subtract_persist: %7d pixels (or %6.3f percent) greater than 0.01 e/s\n' % (values[3],values[3]*100./values[0]))
 		string = 'subtract_persist: Finished (%2d of %2d) %s' % (i+1,len(records)-1,record[0])
-		#130909 Removed print statement as unnneessary.  The string still goes to the history file
-		# print string
+		print string
 		history.write('%s\n' % string)
 
 		# Summarize the Stiumulus printing out the filename, prog_id, visit_name, target, dt and the number of pixels above saturation of 70000
@@ -573,14 +543,6 @@ def do_dataset(dataset='ia21h2e9q',norm=0.3,alpha=0.2,gamma=0.8,e_fermi=80000,kT
 
 
 	# Now write out the persistence image
-
-	# First find out the units of the science image
-
-	units=get_keyword(science_record[0],1,'bunit')
-	# print 'test',units
-	if units[0]=='COUNTS/S':
-		print 'reducing'
-		persist/=2.4
 
 	# subtract and write out the corrected image
 	science=get_image(science_record[0],1,'no')
@@ -739,7 +701,7 @@ def steer(argv):
 			if xynorm=='none':
 				xynorm=''
 		elif argv[i][0]=='-':
-			print 'Error: subtract_persist.steer: Unknown switch ---  %s' % argv[i]
+			print 'Error: Unknown switch ---  %s' % argv[i]
 			return
 		else:
 			words.append(argv[i])

@@ -17,7 +17,7 @@ not exist the routine will exit with an error
 
 Command line usage (if any):
 
-		usage: subtract_eval.py  dataset'
+		usage: subtract_eval2.py  dataset'
 
 Description:  
 
@@ -111,27 +111,27 @@ def do_dataset(dataset='ib6v19bzq',radius=50,local='no'):
 	ready=True
 
 	if os.path.exists(file_flt) == False:
-		print 'Error: subtract_eval.do_dataset: %s does not exist' % file_flt
+		print 'Error: %s does not exist' % file_flt
 		ready=False
 
 	if os.path.exists(file_persist) == False:
-		print 'Error: subtract_eval.do_dataset: %s does not exist' % file_persist
+		print 'Error: %s does not exist' % file_persist
 		ready=False
 
 	if os.path.exists(file_cor) == False:
-		print 'Error: subtract_eval.do_dataset: %s does not exist' % file_cor
+		print 'Error: %s does not exist' % file_cor
 		ready=False
 
 	if os.path.exists(file_stim) == False:
-		print 'Error: subtract_eval.do_dataset: %s does not exist' % file_stim
+		print 'Error: %s does not exist' % file_stim
 		ready=False
 
 	if os.path.exists(file_xy) == False:
-		print 'Error: subtract_eval.do_dataset: %s does not exist' % file_xy 
+		print 'Error: %s does not exist' % file_xy 
 		ready=False
 	
 	if ready==False:
-		return 'Error: subtract_eval.do_dataset: Some files are missing'
+		return 'Error: subtract_eval : Some files are missing'
 
 	# At this point we know all of the necessary files exist
 
@@ -194,7 +194,6 @@ def do_dataset(dataset='ib6v19bzq',radius=50,local='no'):
 		source_no=source_no+1
 		x=one[0]
 		y=one[1]
-		# print 'test x y',x,y
 
 		# Make the stamps that are needed for each file
 		xmin=one[0]-radius
@@ -235,8 +234,7 @@ def do_dataset(dataset='ib6v19bzq',radius=50,local='no'):
 		pylab.imshow(xflt,origin='lower',cmap=pylab.cm.gray,vmin=zmin,vmax=zmax)
 		pylab.title('Original')
 		pylab.subplot(222)
-		# pylab.imshow(xper,origin='lower',cmap=pylab.cm.gray,vmin=0.0,vmax=0.1)
-		pylab.imshow(xper,origin='lower',cmap=pylab.cm.gray,vmin=-0.05,vmax=0.1)
+		pylab.imshow(xper,origin='lower',cmap=pylab.cm.gray,vmin=0.0,vmax=0.1)
 		pylab.title('Model')
 		pylab.subplot(223)
 		pylab.imshow(xcor,origin='lower',cmap=pylab.cm.gray,vmin=zmin,vmax=zmax)
@@ -246,8 +244,8 @@ def do_dataset(dataset='ib6v19bzq',radius=50,local='no'):
 		# Plot the figure that shows the observed rate as a function of estimate persistence
 
 		pylab.subplot(224)
-		pylab.plot(xxper,xxflt,'.',color='green')
-		pylab.plot(xxper,xxcor,'.',color='yellow')
+		pylab.plot(xxper,xxflt,'o')
+		pylab.plot(xxper,xxcor,'o')
 
 		
 
@@ -268,14 +266,12 @@ def do_dataset(dataset='ib6v19bzq',radius=50,local='no'):
 		# Append the results for this particular point to one for all of the points
 		# This is used in the summary slide for the entire field
 
-		# print 'test orig',orig
-
 		all_orig.append(orig)
 		all_corr.append(corr)
 
 		# Note that per_hist has one more element than the other arrays so must allow for this
-		pylab.plot(per_hist[0:len(per_hist)-1],orig,ls='steps-post',lw=4,color='red')
-		pylab.plot(per_hist[0:len(per_hist)-1],corr,ls='steps-post',lw=4,color='blue')
+		pylab.plot(per_hist[0:len(per_hist)-1],orig,ls='steps-post',lw=3)
+		pylab.plot(per_hist[0:len(per_hist)-1],corr,ls='steps-post',lw=3)
 
 		
 
@@ -292,7 +288,7 @@ def do_dataset(dataset='ib6v19bzq',radius=50,local='no'):
 		os.chmod(figure_name,0770)
 
 
-		# print 'test Finished the 4 panel figure'
+		# print 'Finished the 4 panel figure'
 
 		# Plot the original and subtracted pixels as a function of distance from a center positions
 		# Create an array that contains the distance from the center for each pixel
@@ -343,7 +339,6 @@ def do_dataset(dataset='ib6v19bzq',radius=50,local='no'):
 		if os.path.isfile(figure_name):
 			os.remove(figure_name)
 		pylab.savefig(figure_name)
-		# print 'test savefig ',figure_name
 		os.chmod(figure_name,0770)
 
 		# print 'OK',figure_name
@@ -383,14 +378,9 @@ def do_dataset(dataset='ib6v19bzq',radius=50,local='no'):
 	ymin=1000
 	per_hist=numpy.array(per_hist)
 	per_hist=per_hist+0.5*dper
-
-	# print 'test len(all_corr)',len(all_corr)
 	while i<len(all_corr):
 		corr=numpy.array(all_corr[i])
 		orig=numpy.array(all_orig[i])
-
-		# print 'test orig',orig
-
 		corr=corr-corr[0]
 		orig=orig-orig[0]
 		k=0
@@ -410,7 +400,7 @@ def do_dataset(dataset='ib6v19bzq',radius=50,local='no'):
 			if zmax>ymax:
 				ymax=zmax
 		else:
-			print 'Error: subtract_eval.do_dataset: there is a problem, because k=0'
+			print 'Houston there is a problem, because k=0'
 		i=i+1
 	pylab.axis([0,xmax+0.05,ymin-0.05,ymax+0.05])
 	pylab.xlabel('Est. Persistence (e/s)')
@@ -519,9 +509,6 @@ def get_stats(x,y,xmin,xmax):
 
 	'''
 
-	# print 'test get_stats',x.shape,xmin,xmax
-	# print 'test get_stats x',x
-	# print 'test get_stats y',y
 	z=numpy.ma.masked_outside(x,xmin,xmax)
 	zmask=numpy.ma.getmask(z)
 	yy=numpy.ma.array(y,mask=zmask)
@@ -540,5 +527,5 @@ if __name__ == "__main__":
 		# do_dataset(int(sys.argv[1]))
 		do_dataset(sys.argv[1])
 	else:
-		print 'usage: .subtract_eval.py  dataset'
+		print 'usage: .subtract_eval2.py  dataset'
 

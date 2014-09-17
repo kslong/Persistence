@@ -1,4 +1,4 @@
-#!/usr/bin/env python 
+#! /usr/bin/env python 
 
 '''
                     Space Telescope Science Institute
@@ -25,6 +25,7 @@ History:
 110811 ksl Switched to standardized way to set file permissions
 121220 ksl Removed pyraf dependencies after adding a routine to
 	   to get keywords form files
+130909 ksl Standardized printed error messages
 
 '''
 
@@ -86,7 +87,7 @@ def parse_fitsname(name,ext=1,force_ext='no'):
 		try:
 			xext=eval(s[1])
 		except NameError:
-			print 'Could not parse extension (%s), using %d' % s[1],ext
+			print 'Error: parse_fitsname: Could not parse extension (%s), using %d' % s[1],ext
 			xext=ext
 	
 	return xname,xext,'%s[%d]' % (xname,xext)
@@ -106,16 +107,16 @@ def get_ext_type(filename,exten=1):
 	try:
 		z=pyfits.open(name[0])
 	except IOError:
-		print 'Error get_ext_type: file %s not found' % filename
+		print 'Error: get_ext_type: file %s not found' % filename
 		return 'UNKNOWN'
 
 	try:
 		one_ext=z[name[1]]
 		type=one_ext.header['EXTNAME']
 	except IndexError:
-		print 'Error get_ext_type: %d exceeds the number of extensions in file %s' % (exten,filename)
+		print 'Error: get_ext_type: %d exceeds the number of extensions in file %s' % (exten,filename)
 	except KeyError:
-		print 'Error get_ext_type: EXTNAME is not found in header extension %d in file %s' % (exten,filename)
+		print 'Error: get_ext_type: EXTNAME is not found in header extension %d in file %s' % (exten,filename)
 
 	z.close()
 	return type
@@ -151,7 +152,7 @@ def get_image_pixel_info(filename,exten=1):
 	try:
 		z=pyfits.open(name[0])
 	except IOError:
-		print 'Error get_pixel_info: file %s not found' % filename
+		print 'Error: get_pixel_info: file %s not found' % filename
 		return 'UNKNOWN'
 
 	try:
@@ -165,9 +166,9 @@ def get_image_pixel_info(filename,exten=1):
 		cols=shape[1]
 
 	except IndexError:
-		print 'Error get_pixel_info: %d exceeds the number of extensions in file %s' % (exten,filename)
+		print 'Error: get_image_pixel_info: %d exceeds the number of extensions in file %s' % (exten,filename)
 	except KeyError:
-		print 'Error get_ext_info: EXTNAME is not found in header extension %d in file %s' % (exten,filename)
+		print 'Error: get_image_pixel_info: EXTNAME is not found in header extension %d in file %s' % (exten,filename)
 
 	z.close()
 	return [rows,cols,offset_y,offset_x]
@@ -212,14 +213,14 @@ def get_keyword(filename,exten,keywords='bunit',default='Unknown'):
 	try:
 		z=pyfits.open(name[0])
 	except IOError:
-		print 'Error get_pixel_info: file %s not found' % filename
+		print 'Error: get_keyword: file %s not found' % filename
 		return default
 
 	try:
 		zero_ext=z[0]
 		one_ext=z[name[1]]
 	except IndexError:
-		print 'Error get_keyword: %d exceeds the number of extensions in file %s' % (exten,filename)
+		print 'Error: get_keyword: %d exceeds the number of extensions in file %s' % (exten,filename)
 		return default
 
 
@@ -236,7 +237,7 @@ def get_keyword(filename,exten,keywords='bunit',default='Unknown'):
 			try:
 				answer.append(zero_ext.header[word])
 			except KeyError:
-				print 'Error get_keyword: %s is not found in header extension %d in file %s' % (word,exten,filename)
+				print 'Error: get_keyword: %s is not found in header extension %d in file %s' % (word,exten,filename)
 				answer.append(default)
 
 	z.close()
@@ -559,7 +560,7 @@ def get_ext_info(filename,type='SCI'):
 	try:
 		z=pyfits.open(filename)
 	except IOError:
-		print 'Error get_ext_info: file %s not found' % filename
+		print 'Error: get_ext_info: file %s not found' % filename
 		return []
 
 	i=1
@@ -576,7 +577,7 @@ def get_ext_info(filename,type='SCI'):
 						samptime=one_ext.header['SAMPTIME']
 						line.append(samptime)
 					except KeyError:
-						print 'SAMPTIME keyword not found for ext %d' % i
+						print 'Error: get_ext_info: SAMPTIME keyword not found for ext %d' % i
 				ext.append(line)
 		except KeyError:
 			print 'EXTNAME keyword not found for ext %d' % i

@@ -1,4 +1,4 @@
-#!/usr/bin/env python 
+#! /usr/bin/env python 
 
 '''
                     Space Telescope Science Institute
@@ -25,6 +25,9 @@ Primary routines:
 	log(string,filename='history.log',option='a'):
 
 Notes:
+	130909:  As written one needs to be careful about
+		how this is used since you can only have
+		one history file open at the same time. 
 									   
 History:
 

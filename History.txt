@@ -6,3 +6,4 @@ to the directory cal
 130802 - Returned to working on a new version of the software.  This 
 is going to be Version2.1 of the software.  Put under git control at
 this time
+Archive of persistence on 140917 from /Users/long/WFC3/py_progs by long

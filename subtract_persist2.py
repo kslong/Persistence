@@ -48,31 +48,14 @@ subtract_persisty.py -local - causes the output files to be written in a subdire
 
 Other switches allow you to control the persistence function that is subtracted, e. g.
 
--gamma	-- The power law time decay
+-gamma	-- The power law decay
 -n	-- The normalization at 1000 s
 -e	-- The fermi energy, nominally the place where the fermi distribution reaches half
 	    the maximum
 -kT	-- The width of the fermi function
--alpha	-- The power law exponent which accounts for the continued increase of flux at 
-	   higher flux levels
--xynorm foo.fits -- replaces the default file which corrects for spatial dependence of persistence 
-		with a file foo.fits.  The correction file shold be a file which is on average 1, 
-		with values larger or smaller than this indicating the sensitivity to persistence.
-		this file is multipled with the overall model
--xynorm none -- Do not make a spatially dependent correction.
-
-Outputs:
-
-	See do_dataset
 	
 
 Primary routines:
-
-	The main routine is do_dataset which handles an individual dataset.  This is
-	the routine called by run_persist
-
-	If the routine is called from the command line, then the routine steer handles
-	the processing of command line switches and queueing up the datasets.
 
 Notes:
 									   
@@ -81,10 +64,6 @@ History:
 100603	ksl	Coding begun
 101014	ksl	Began adding capabilities to use this in a production-like
 		environment
-121220	ksl	Darks are not normally processed to e/s but are left in counts/s.
-		Modified so that all of the files have the same units as the file
-		to be analyzed, even though the base calculation of the model in
-		in e/s
 
 '''
 
@@ -202,14 +181,9 @@ def calc_persist(x,dq,dt=1000,norm=0.3,alpha=0.2,gamma=0.8,e_fermi=80000,kT=2000
 	array is returned.  Also, there is no attempt to treat pixels with dq flags
 	differently, which mens one is dependent on whatever flux there is there.
 
-	Note also that this routine does not allow for spatial variation in persistence.
-	That correction is applied at the in do_dataset()
-
 	101207	ksl	Modified so the arrays are passed to calc_persist rather than
 			files which must be read  in order to reduce the 
 			number of times an image is read and to allow for subarrays
-	110926	ksl	Fixed to avoid the problem due to the very occassional absence
-			of a dq array
 
 
 	'''
@@ -218,10 +192,9 @@ def calc_persist(x,dq,dt=1000,norm=0.3,alpha=0.2,gamma=0.8,e_fermi=80000,kT=2000
 	# of calwf3 there are certain values in the flt file that were set to zero because it was hard to
 	# estimate the count rate from them due to the fact that the souce was very bright
 
-	# 110926 - ksl - Avoid fixup if there is no dq array
-	if len(dq)>0:
-		dq=numpy.bitwise_and(dq,256)
-		x=fixup(x,dq)
+	dq=numpy.bitwise_and(dq,256)
+
+	x=fixup(x,dq)
 
 	# Calculate the persistence image
 
@@ -306,7 +279,7 @@ def get_stats(image,saturation=70000):
 
 
 
-def do_dataset(dataset='ia21h2e9q',norm=0.3,alpha=0.2,gamma=0.8,e_fermi=80000,kT=20000,fileroot='observations',ds9='yes',local='no',xynorm='persist_corr.fits'):
+def do_dataset(dataset='ia21h2e9q',norm=0.3,alpha=0.2,gamma=0.8,e_fermi=80000,kT=20000,fileroot='observations',ds9='yes',local='no'):
 	'''
 	Create a persistence image for this dataset.  This version works by creating using the 
 	persistance model from each of the previous images.  It assumes that the only one which
@@ -316,21 +289,6 @@ def do_dataset(dataset='ia21h2e9q',norm=0.3,alpha=0.2,gamma=0.8,e_fermi=80000,kT
 		OK:  something
 		NOK: something
 
-	Outputs:
-		If there were IR observations that preceded the observation being analyzed
-		then this routines creates various fits files:
-			rootname_persist.fits  - The model for the total of internal and external persistnce
-			rootname_extper.fits   - The model for persistence from earlier visits, aka
-			                         external persistence
-			rootname_flt_cor.fits  - The corrected flt file
-			rootname_stim.fits     - The stimulus that caused the persistence
-			rootname_dt.fits       - The time at which the stimulus occurred
-		Plots of the various images are also created, as well as a log file for
-		the data set
-	Notes:
-		This is really the main routine of the program.  When run_persist.py calls this modeule. 
-		this is the routine that is called.
-
 	History
 
 	100905	ksl	Added disgnostic files to record the time of the stimulus and the
@@ -339,8 +297,6 @@ def do_dataset(dataset='ia21h2e9q',norm=0.3,alpha=0.2,gamma=0.8,e_fermi=80000,kT
 			added a history file, so we would know what had happened
 	110122	ksl	Added a switch to turn off displaying with ds9
 	110324	ksl	Changed call to accommodate new persistence model
-	110602	ksl	Incorporated the possibility of providing a correction file xynorm to account
-			for spatial variations across the detector persistence model
 	'''
 
 	cur_time=date.get_gmt()
@@ -380,14 +336,9 @@ def do_dataset(dataset='ia21h2e9q',norm=0.3,alpha=0.2,gamma=0.8,e_fermi=80000,kT
 		return path
 
 	# Open a history file.  Note that one needs the path before one can do this
-
-	history=per_list.open_file(path+science_record[1]+'.txt')
-
-	# history=open(path+science_record[1]+'.txt','w')
-	# os.chmod(path+science_record[1]+'.txt',0770)
-
+	history=open(path+science_record[1]+'.txt','w')
 	history.write('START:  Persistence processing of file %s\n\n' % science_record[1])
-	history.write('! Processed: %s\n' % date.get_gmt())
+	history.write('! Date:	    %s\n' % date.get_gmt())
 	history.write('! ProgramID: %s\n' % sci_progid)
 	history.write('! Visit:     %s\n' % sci_visit)
 	history.write('! FltFile:   %s\n' % science_record[1])
@@ -436,15 +387,8 @@ def do_dataset(dataset='ia21h2e9q',norm=0.3,alpha=0.2,gamma=0.8,e_fermi=80000,kT
 	ext_values=[]  # A place to store information about the persistence due to other observers
 	ext_persist=[] # This is a place holder for storing the extenal persistence
 
-	if xynorm!='':
-		xcorr=get_image(xynorm,1)
-		if len(xcorr)==0:
-			xynorm=''  # This is an error because we were unable to find the file
 
 
-
-
-	# Now we start actually creating the persistence model
 	i=0
 	while i<len(records)-1:
 		record=records[i]
@@ -465,14 +409,12 @@ def do_dataset(dataset='ia21h2e9q',norm=0.3,alpha=0.2,gamma=0.8,e_fermi=80000,kT
 			history.write('%s\n' % xstring)
 			print xstring
 			return xstring
-
 		dq=get_image(record[0],3,fileref=science_record[0])     # Get the dq 
 		if len(dq)==0:
 			xstring = 'NOK: Problem with dq extension of %s' % record[0]
 			history.write('%s\n' % xstring)
 			print xstring
-			# 110926 - ksl - modified to allow this to process the image even if there was no dq array
-			# return xstring
+			return xstring
 
 		if i==0:
 			persist=calc_persist(x,dq,dt,norm,alpha,gamma,e_fermi,kT)
@@ -487,7 +429,6 @@ def do_dataset(dataset='ia21h2e9q',norm=0.3,alpha=0.2,gamma=0.8,e_fermi=80000,kT
 			xtimes=numpy.select([xpersist>persist],[dt],default=xtimes)
 			persist=numpy.select([xpersist>persist],[xpersist],default=persist)
 		
-
 		# Get some elementary statistics on the stimulus
 		xvalues=get_stats(x,70000)
 
@@ -503,8 +444,7 @@ def do_dataset(dataset='ia21h2e9q',norm=0.3,alpha=0.2,gamma=0.8,e_fermi=80000,kT
 		history.write('subtract_persist: %7d pixels (or %6.3f percent) greater than 0.03 e/s\n' % (values[2],values[2]*100./values[0]))
 		history.write('subtract_persist: %7d pixels (or %6.3f percent) greater than 0.01 e/s\n' % (values[3],values[3]*100./values[0]))
 		string = 'subtract_persist: Finished (%2d of %2d) %s' % (i+1,len(records)-1,record[0])
-		#130909 Removed print statement as unnneessary.  The string still goes to the history file
-		# print string
+		print string
 		history.write('%s\n' % string)
 
 		# Summarize the Stiumulus printing out the filename, prog_id, visit_name, target, dt and the number of pixels above saturation of 70000
@@ -518,10 +458,6 @@ def do_dataset(dataset='ia21h2e9q',norm=0.3,alpha=0.2,gamma=0.8,e_fermi=80000,kT
 		i=i+1
 	
 	# First report on the external persistence for this file;
-
-	# Now apply the fix to account for spatial variations in persistence
-	if xynorm !='' and numpy.shape(xcorr)==numpy.shape(persist):
-		persist=persist*xcorr
 
 
 	if len(ext_values)>0:
@@ -573,14 +509,6 @@ def do_dataset(dataset='ia21h2e9q',norm=0.3,alpha=0.2,gamma=0.8,e_fermi=80000,kT
 
 
 	# Now write out the persistence image
-
-	# First find out the units of the science image
-
-	units=get_keyword(science_record[0],1,'bunit')
-	# print 'test',units
-	if units[0]=='COUNTS/S':
-		print 'reducing'
-		persist/=2.4
 
 	# subtract and write out the corrected image
 	science=get_image(science_record[0],1,'no')
@@ -636,15 +564,8 @@ def do_dataset(dataset='ia21h2e9q',norm=0.3,alpha=0.2,gamma=0.8,e_fermi=80000,kT
 		pylab.title('Stimulus')
 
 	fig1=path+'Figs/'+dataset+'_subtract.png'
-
-
-	if os.path.isfile(fig1):
-		os.remove(fig1)
 	pylab.savefig(fig1)
-	os.chmod(fig1,0770)
-
-	# Eliminated to prevent an error on linux having to do with tkinter
-	# pylab.close('all')
+	pylab.close('all')
 
 	if ds9=='yes':
 		LoadFrame(science_record[0],1,0,2,'histequ')
@@ -678,7 +599,6 @@ def steer(argv):
 	e_fermi=80000
 	kT=20000
 	fileroot='observations'
-	xynorm='persist_corr.fits'
 	words=[]
 	mjd_after=0.0    # A amall number for mjd
 	mjd_before=1.e6  # A large number for mjd
@@ -733,13 +653,8 @@ def steer(argv):
 			ds9='yes'
 		elif argv[i]=='-local':
 			local='yes'
-		elif argv[i]=='-xy':
-			i=i+1
-			xynorm=argv[i]
-			if xynorm=='none':
-				xynorm=''
 		elif argv[i][0]=='-':
-			print 'Error: subtract_persist.steer: Unknown switch ---  %s' % argv[i]
+			print 'Error: Unknown switch ---  %s' % argv[i]
 			return
 		else:
 			words.append(argv[i])
@@ -747,9 +662,7 @@ def steer(argv):
 	
 	if dataset_list=='none': #  Then we are processing a single file
 		dataset=words[0]
-		do_dataset(dataset,norm,alpha,gamma,e_fermi,kT,fileroot,ds9,local,xynorm)
-	# Note it is not clear to me what is going on here.  What distiguishes the next
-	# to options, and why isn't per_list being used  111019 -- ksl  !!!
+		do_dataset(dataset,norm,alpha,gamma,e_fermi,kT,fileroot,ds9,local)
 	elif dataset_list=='!All': # Then we are working from the obslist
 		f=open(fileroot+'.ls','r')
 		lines=f.readlines()
@@ -762,7 +675,7 @@ def steer(argv):
 				mjd=float(word[6])
 				print mjd,mjd_before,mjd_after
 				if mjd_after  <= mjd and mjd <= mjd_before:
-					do_dataset(word[1],norm,alpha,gamma,e_fermi,kT,fileroot,ds9,local,xynorm)
+					do_dataset(word[1],norm,alpha,gamma,e_fermi,kT,fileroot,ds9,local)
 	else:
 		f=open(dataset_list,'r')
 		lines=f.readlines()
@@ -771,9 +684,9 @@ def steer(argv):
 		for line in lines:
 			x=line.strip()
 			if len(x)>0 and x[0]!='#':
-				mjd=float(x[6])
+				mjd=flaot(x[6])
 				if mjd_after <= mjd and mjd <= mjd_before:
-					do_dataset(x,norm,alpha,gamma,e_fermi,kT,fileroot,ds9,local,xynorm)
+					do_dataset(x,norm,alpha,gamma,e_fermi,kT,fileroot,ds9,local)
 	
 	return
 

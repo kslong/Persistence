@@ -44,6 +44,12 @@ History:
 
 '''
 
+
+# Added so this can run in the background without a $DISPLAY 
+# environment variable.
+import matplotlib
+matplotlib.use('Agg')
+
 import sys
 import date
 import os
@@ -51,6 +57,7 @@ import per_list
 import numpy
 import html
 import pylab
+
 
 def link2file(link,word=''):
 	'''
@@ -61,9 +68,6 @@ def link2file(link,word=''):
 	
 	string='<a href="file:%s" > %s </a>'  % (link,word) 
 	return string
-
-
-
 
 
 def make_html(lines,filename='observations.html'):
@@ -534,5 +538,5 @@ if __name__ == "__main__":
 	if len(sys.argv)>1:
 		steer(sys.argv)   
 	else:
-		print 'subtract_sum.py -h to get help'
+		# sys.argv.append('-h')
 		steer(sys.argv)   

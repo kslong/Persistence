@@ -1,4 +1,4 @@
-#!/usr/bin/env python 
+#! /usr/bin/env python 
 
 '''
                     Space Telescope Science Institute
@@ -70,9 +70,9 @@ def smooth(image,size):
 	Smooth a 2d image array using 
 	a boxcar of size given by size
 	'''
-	print 'smooth',numpy.max(image),numpy.min(image),numpy.median(image)
+	# print 'smooth',numpy.max(image),numpy.min(image),numpy.median(image)
 	z=convolve.boxcar(image,(size,size),mode='constant',cval=0.0)
-	print 'smooth',numpy.max(z),numpy.min(z),numpy.median(z)
+	# print 'smooth',numpy.max(z),numpy.min(z),numpy.median(z)
 	return z
 
 def find_peaks(image,mask='none',sep=20,maxno=20):
@@ -97,7 +97,6 @@ def find_peaks(image,mask='none',sep=20,maxno=20):
 		    subsidiary peaks in near a bright object.
 	'''
 
-	print 'test: finding peaks in image %s with mask %s with sep %f and max %d' %(image,mask,sep,maxno)
 
 	ysize,xsize=image.shape
 
@@ -154,7 +153,7 @@ def find_peaks(image,mask='none',sep=20,maxno=20):
 		print 'peaks: No mask! Found are %d peaks in smoothed persistence image with flux > %f' % (len(sources),im[i])
 		return sources
 
-	print 'test: At this point we have %d soures' % len(sources)
+	# print 'test: At this point we have %d soures' % len(sources)
 
 	# Note that this is slightly dangerous since we are using the model to exclude points as well as the mask
 	# sources contains, the x and y position, and the flux in the image and the mask
@@ -182,7 +181,7 @@ def find_peaks(image,mask='none',sep=20,maxno=20):
 			xsources.append(one)
 		
 	
-	print 'peaks: Found are %d peaks in smoothed persistence image with flux > %f' % (len(xsources),im[i])
+	print 'peaks: Found %d peaks in smoothed persistence image with flux > %f' % (len(xsources),im[i])
 	return xsources
 
 
@@ -228,7 +227,9 @@ def make_reg(sources,regionfile='sources.reg'):
 def doit(filename='foo.fits',mask_file='none',box=3,maxno=25,history_file='history.txt',local='no'):
 	'''
 	Main routine which handles finding of the peaks and creating plots which indicate
-	how well the persistence has been subtracted
+	how well the persistence has been subtracted.  It attemps to locate region with 
+	a significant amount of persistence, but to avoid regions where the flux from
+	stars in the image under consideration is large.
 	
 	The variables are as follows:
 		filename	The persist model
@@ -253,9 +254,12 @@ def doit(filename='foo.fits',mask_file='none',box=3,maxno=25,history_file='histo
 	subtract_eval instead.
 
 	111011	ksl	Tried to clean this routine up and make it run a little better
-	131204	ksl	Modified the data quality criterion to elimate the possibility
+	130204	ksl	Modified the data quality criterion to elimate the possibility
 			that the TDF had been set which causes all of the pixels to
 			be declared bad.
+	130913  ksl     Restored the use of DQ flags to since the problem with loss of 
+			lock, which in certain cases, particularly darks, caused all
+			pixels to have bad DQ.
 
 
 	'''
@@ -290,35 +294,31 @@ def doit(filename='foo.fits',mask_file='none',box=3,maxno=25,history_file='histo
 		history.write('Peaks: Nothing to do since no data returned for %s\n' % filename)
 		return 'NOK'
 
-	# Read the mask file if there is one given
+	# Now read the flt file, which will be used to create a mask file in an attempt 
+	# to remove from considerations regions of the image where there is persistence which
+	# would be overwhelmed by light in the current image.
+	# Read both the image and the data quality
+	# extension.  The data quality extension is used to help assure that we are tracking
+	# persistence from light in earlier exp sures.  For these pixels, we set the value
+	# in the persitence image to zero, before the persistence image is smoothed.
+	# Then smooth the persitence image  so that peak finding is easier
+
 	if mask_file!='none':
 		mask=per_fits.get_image(mask_file,1,rescale='e/s')
-		# First subtract away the median value which we assume is the background
-		# xmed=numpy.median(mask)
-		# mask=mask-xmed
 		xmask=smooth(mask,box)
 		dq=per_fits.get_image(mask_file,3,rescale='no')
-		# mask=numpy.select([dq>0],[1e6],default=mask) # This line is intended to effectively excludes points with dq issues
-		# 130104- This is a temporary fix to avoid the situation where all of the dq values have been set to 4, which happened
-		# for a number of darks in late 2012
-		# mask=numpy.select([dq>4],[1e6],default=mask) # This line is intended to effectively excludes points with dq issues
+		z=numpy.select([dq>0],[0],default=x)
+		z=smooth(z,box)
 		history.write('Peaks: Using %s to mask exposure\n' % mask_file)
 	else:
 		history.write('Peaks: No mask from earlier undithered exposures\n')
+		z=smooth(x,box)
 		mask='none'
-
-	# Determine some of the characterisics of the persistence image
-
-		
-	# Note boxcar smoothing is pretty fast
-	# Smoth the images so that peak finding is easier
-	z=smooth(x,box)
 
 	# After having set everything up call the routine that locates the peaks to use to see
 	# how well the subtraction works
 
 	sources=find_peaks(z,mask,maxno=maxno)
-
 
 	# Write out the results in a text file containing
 	# the x and y positions
@@ -339,15 +339,17 @@ def doit(filename='foo.fits',mask_file='none',box=3,maxno=25,history_file='histo
 	make_reg(sources,work_dir+outroot+'.peaks.reg')
 
 
-	# Plot the results. This creates one 4 panel figure for each peak
+	# Plot the results. This creates two images, one with the regions selectd for detailed 
+	# anaylsis superposed.
+
 	xmed=numpy.median(x)
 	pylab.figure(1,(8,12))
 	pylab.clf()
 	pylab.subplot(211)
-	pylab.imshow(x,cmap=pylab.cm.gray,vmin=xmed-0.05,vmax=xmed+0.05)
+	pylab.imshow(x,origin='lower',cmap=pylab.cm.gray,vmin=xmed-0.05,vmax=xmed+0.05)
 	plothandle=pylab.subplot(212)
 	ysize,xsize=x.shape
-	pylab.imshow(z,extent=[0,xsize,0,ysize],cmap=pylab.cm.gray,vmin=xmed-0.05,vmax=xmed+0.05)
+	pylab.imshow(z,origin='lower',extent=[0,xsize,0,ysize],cmap=pylab.cm.gray,vmin=xmed-0.05,vmax=xmed+0.05)
 
 	# For reasons I don't quit understand, one needs to add 1 to both axes
 	# To get the circles to line up, as if the elements were being counted
@@ -362,6 +364,8 @@ def doit(filename='foo.fits',mask_file='none',box=3,maxno=25,history_file='histo
 		os.remove(figure_name)
 	pylab.savefig(figure_name)
 	os.chmod(figure_name,0770)
+
+	# Generation of this summary plot is now complete.
 
 
 	# 110325 - This next line was generating errors with the backend I was using.  The desired behavior

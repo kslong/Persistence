@@ -1,4 +1,4 @@
-#!/usr/bin/env python 
+#! /usr/bin/env python 
 
 '''
                     Space Telescope Science Institute
@@ -51,6 +51,7 @@ Description:
 Primary routines:
 
 Notes:
+	This should probably be rewritten to remove the iraf dependencies
 									   
 History:
 
@@ -71,6 +72,7 @@ History:
 		became more complicated.
 120330	ksl	Modified the help so that it reflects how the routine actually 
 		works
+130909 ksl	Standardized error printouts
 
 '''
 
@@ -140,7 +142,7 @@ def open_file(filename,permiss=0770):
 	try:
 		os.chmod(filename,permiss)
 	except OSError:
-		print 'Error: open_file trying to set permissions'
+		print 'Error: open_file: OSerror trying to set permissions'
 	return g
 
 
@@ -213,14 +215,14 @@ def set_path(name,mkdirs='yes',local='no'):
 				i=string.rindex(name,'/')
 				path=name[0:i]
 			except ValueError:
-				print 'Warning: set_path - Assuming the intent was to work in the current directory'
+				print 'Warning: set_path: Assuming the intent was to work in the current directory'
 				path='./'
 	else:
 		path='./'
 
 	# Check whether the parent directory for Persits exists
 	if os.path.exists(path)==False:
-		string='set path - The directory %s contained in %s does not exist' % (path,name)
+		string='set path: The directory %s contained in %s does not exist' % (path,name)
 		print 'Error:  %s' % (string)
 		return 'NOK %s ' % string
 
@@ -251,7 +253,7 @@ def set_path(name,mkdirs='yes',local='no'):
 
 
 		except OSError:
-			print '!NOK Could not create %s for %s' % (path,name)
+			print 'Error: set_path: Could not create %s for %s' % (path,name)
 			return 'NOK Could not create %s' % path
 
 
@@ -423,7 +425,7 @@ def old_check4duplicates(records):
 		try:
 			tbest=parse_creation_time(records[hold[0]][17])
 		except IndexError:
-			print 'Record problem',records[hold[0]]
+			print 'Error:old_check4duplicates: Record problem',records[hold[0]]
 
 		# Test the remaing records starting with 1
 		k=1
@@ -431,7 +433,7 @@ def old_check4duplicates(records):
 			try:
 				tdup=parse_creation_time(records[hold[k]][17])
 			except IndexError:
-				print 'Record problem',records[hold[k]]
+				print 'Error:old_check4duplicates: Record problem',records[hold[k]]
 			if tdup>tbest:
 				best=hold[k]
 				tbest=records[hold[k]][17]
@@ -541,7 +543,7 @@ def update_summary(dataset,status_word='Unknown',results='Whatever you want',fil
 		lines=f.readlines()
 		f.close()
 	except IOError:
-		print 'File %s does not exist' % summary_file
+		print 'Error: update_sumamry: File %s does not exist' % summary_file
 		return
 
 	# g=open('tmp.sum','w')
@@ -639,7 +641,7 @@ def make_sum_file(fileroot='observations',new='no'):
 			f=open(summary_file,'r')
 			summary=f.readlines()
 		except  IOError:
-			print 'Could not read summary file %s ' % summary_file
+			print 'Error: make_sum_file: Could not read summary file %s ' % summary_file
 
 		# Get the dataset names in the summary file
 		datasets=[]
@@ -671,7 +673,7 @@ def make_sum_file(fileroot='observations',new='no'):
 
 		ndup=check_sum_file('tmp.sum',summary_file)
 		if ndup>0:
-			print 'Error - Since there were duplicates in th tmp file, not moving to %s'  % (summary_file)
+			print 'Error: make_sum_file: Since there were duplicates in th tmp file, not moving to %s'  % (summary_file)
 			return 'NOK  - Since there were duplicates in th tmp file, not moving to %s'  % (summary_file)
 
 		# Now move the files around.  Note that the next 3 lines need to be the same as in update_summary above
@@ -799,8 +801,10 @@ def make_ordered_list(fileroot='observations',apertures='full',filetype='flt',ne
 	110121	Added a line to assure that PI names had no spaces.  This was because running
 		split on records caused with spaces int he PI name was failing.  The alternative
 		which was to change the separated character to a tab seemed more trouble
-	120330	Added a kludge to add a date for a raw data file.  For reason that are unclear
-		this was not in correct place in the file.
+	120330	Added a kludge to add a date for a raw data file.  The prupose of this date is 
+		resolve situations in which multiple versions of the same file are in the
+		directory structure.  The choice is only accurate to the day
+	130820	Revised the way in which searched for the date in raw data files.
 	'''
 
 	if filetype!='flt':
@@ -843,20 +847,20 @@ def make_ordered_list(fileroot='observations',apertures='full',filetype='flt',ne
 
 			x=x[0].split('\t')
 
+			# print 'test0',x
+
 			# Kluge for raw data files which have two ROOTNAME keywords for unknown reasons
 			if x[1]==x[2]:
 				x.pop(2)
 
 			x[16].replace(' ','-')  # Get rid of spaces in PI names
 
-			# Another kludge for raw files.  The is no 'date' field in the first extension as there is for raw and ima files
+			# Another kludge for raw files.  The is no 'date' field in the first extension as there is for flt and ima files, but DATE does exist in extension 0
 			if filetype=='raw':
 				xname=per_fits.parse_fitsname(xfile,0,'yes')
-				# print 'test',xname
-				xx=pyraf.iraf.hselect(xname[2],'$I,IRAF-TLM','yes',Stdout=1)
-				# print xname,'hello',xx
+				# xx=pyraf.iraf.hselect(xname[2],'$I,IRAF-TLM','yes',Stdout=1)
+				xx=pyraf.iraf.hselect(xname[2],'$I,DATE','yes',Stdout=1)
 				xx=xx[0].split('\t')
-				# print xname,'hello',xx
 				x.append(xx[1])
 
 			if x[5]=='IR':
@@ -960,7 +964,7 @@ def read_ordered_list0(fileroot='observations'):
 		lines=f.readlines()
 		f.close
 	except IOError:
-		print 'Could not open %s ' % (fileroot+'.ls')
+		print 'Error: read_ordered_list0: Could not open %s ' % (fileroot+'.ls')
 		return []
 
 	for line in lines:
@@ -1000,7 +1004,7 @@ def read_ordered_list2(fileroot='observations',dataset='first',interval=[-1,2],o
 		izero=izero+1
 
 	if izero==len(records):
-		print 'Error: Could not locate record for dataset %s in %s.ls' % (dataset,fileroot)
+		print 'Error: read_ordered_list2: Could not locate record for dataset %s in %s.ls' % (dataset,fileroot)
 		# print 'Using first record'
 		# izero=0
 		# Changed this return 101215 to trap datasets that are not in observations.ls
@@ -1085,7 +1089,7 @@ def read_ordered_list(fileroot='observations',dataset='last',delta_time=24):
 			ilast=ilast+1
 
 		if ilast==len(records):
-			print 'Error: Did not find dataset %s, returning' % dataset
+			print 'Error: read_ordered_list: Did not find dataset %s, returning' % dataset
 			return []
 
 		end_time=eval(records[ilast][6])

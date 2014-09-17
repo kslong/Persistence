@@ -1,4 +1,4 @@
-#!/usr/bin/env python 
+#! /usr/bin/env python 
 
 '''
                     Space Telescope Science Institute
@@ -78,7 +78,7 @@ def set(name):
 	elif os.path.isfile(name)==True:
 		isdir=False
 	else:
-		print 'Error: %s either does not exist' % name     
+		print 'Error: set: %s does not exist' % name     
 		return False
 
 	# Next get the absolute path name of the file or directory

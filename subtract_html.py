@@ -1,4 +1,4 @@
-#!/usr/bin/env python 
+#! /usr/bin/env python 
 
 '''
                     Space Telescope Science Institute
@@ -239,7 +239,7 @@ def do_dataset(dataset='ia21h2eaq',fileroot='observations',local='no'):
 	# Look for the peaks summary
 
 	string='''This figures indicates what regions were selected for evaluation. The two panels are
-	identical except the regions are displayed on the lower panel'''
+	identical except the regions selected are indicated in the lower panel. '''
 
 	page=page+html.paragraph(string)
 
@@ -276,7 +276,7 @@ def do_dataset(dataset='ia21h2eaq',fileroot='observations',local='no'):
 			xlines.append(one)
 
 	if len(xlines)>0:
-		string='''The results for individual regions are shown below:'''
+		string='''The results for individual regions are shown below. The four panels are a subsection of the original flt file, the predicted persistence in that region, the persistence subtracted flt file, and a plot of pixel values as a function of predicted persistence in the region. Green points are the original values; yellow point are the corrected values. The red and blue lines show the mean values in the original and corrected and corrected images, respectively.'''
 		page=page+html.paragraph(string)
 		page=page+html.hline(size='3',width='100')
 
