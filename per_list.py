@@ -50,6 +50,10 @@ Description:
 
 Primary routines:
 
+	steer 			Parses the command line and runs the program
+	mske_ordered_list	Creates .ls file
+	make_sum_file		Creates/updates the summary file
+
 Notes:
 	This should probably be rewritten to remove the iraf dependencies
 									   
@@ -89,6 +93,7 @@ import pylab
 import pyraf
 import shutil
 import per_fits
+from astropy.io import fits
 
 
 # Utilities
@@ -387,76 +392,6 @@ def check4duplicates(records):
 	
 
 
-def old_check4duplicates(records):
-	'''
-	Check the list 4 duplicate records, and choose the one that was
-	created last if that is possible
-
-	The routine returns a list that contains 'ok' for files that 
-	are the ones to use and 'nok' for those that are duplicates
-
-	100817	Added checks to trap problems parsing times.
-	'''
-
-
-	all_datasets=[]
-	ok=[]
-	for record in records:
-		all_datasets.append(record[1])
-		ok.append('ok')
-	
-	i=0
-	while i<len(records):
-		one=records[i]
-		hold=[i]
-
-		j=i+1
-		while j<len(records):
-			two=records[j]
-			if one[1]==two[1]:
-				hold.append(j)
-			j=j+1
-
-		# Hold has indices to the duplicates of this record
-		# print 'test',hold
-		
-		# Choose the first record
-		best=hold[0]
-		try:
-			tbest=parse_creation_time(records[hold[0]][17])
-		except IndexError:
-			print 'Error:old_check4duplicates: Record problem',records[hold[0]]
-
-		# Test the remaing records starting with 1
-		k=1
-		while k<len(hold):
-			try:
-				tdup=parse_creation_time(records[hold[k]][17])
-			except IndexError:
-				print 'Error:old_check4duplicates: Record problem',records[hold[k]]
-			if tdup>tbest:
-				best=hold[k]
-				tbest=records[hold[k]][17]
-			k=k+1
-
-		# Now set all the ones that are not best to nok
-		k=0
-		while k<len(hold):
-			if best!=hold[k]:
-				ok[hold[k]]='nok'
-			k=k+1
-		# Now go on to the next record.  
-		i=i+1
-	return ok
-	
-
-
-
-
-
-
-
-
 
 
 def find_latest(filename='foo'):
@@ -504,7 +439,103 @@ def find_latest(filename='foo'):
 	return fbest
 
 
+
+
+def check4scan_old(filename='./Visit43/ic9t43j1q_flt.fits[1]'):
+	'''
+	Determine whether or not a raw, ima, or flt file is associated with an observation involving  
+	a spatial scan.  
+
+	Return:
+		scan	if a spatial scan
+		stare   if the spt file exists, but it is not a spatial san
+		unknown	if the spt file does not exist
 	
+	Notes:
+
+	The routine looks for the spt file corresponding to the dataset and
+	parses the header to find out if it is a scanned observation.
+	
+	130225  Coded and Debugged
+	'''
+
+	xscan=''
+
+
+	xfile=xname[0]
+	xfile=xfile.replace('flt','spt')
+	xfile=xfile.replace('raw','spt')
+	xfile=xfile.replace('ima','spt')
+
+	# Now we should have the name of the spt file
+
+
+	try:
+		x=fits.open(xfile)
+	except IOError:
+		return 'no_spt'
+
+
+
+	if x[0].header['SCAN_TYP'] == 'N':
+		xscan='stare'
+	else: 
+		xscan='scan'
+
+	x.close()
+
+	return xscan  
+	
+
+
+
+def check4scan(filename='./Visit43/ic9t43j1q_flt.fits[1]'):
+	'''
+	Determine whether or not a raw, ima, or flt file is associated with an observation involving  
+	a spatial scan.  
+
+	Return:
+		scan	if a spatial scan
+		stare   if the spt file exists, but it is not a spatial san
+		unknown	if the spt file does not exist
+	
+	Notes:
+
+	The routine looks for the spt file corresponding to the dataset and
+	parses the header to find out if it is a scanned observation.
+	
+	130225  Coded and Debugged
+	130307  Replaced routine using astropy.fits with iraf because astropy.fits
+		was very slow
+	'''
+
+	xscan='unknown'
+
+	# First strip of the extension if any
+	xname=per_fits.parse_fitsname(filename,0,'yes')
+	xfile=xname[0]
+	xfile=xfile.replace('flt','spt')
+	xfile=xfile.replace('raw','spt')
+	xfile=xfile.replace('ima','spt')
+
+	# Now we should have the name of the spt file
+	if pyraf.iraf.imaccess(xfile):
+		xx=pyraf.iraf.hselect(xfile+'[0]','SCAN_TYP','yes',Stdout=1)
+		xx=xx[0].split('\t')
+	else: 
+		return 'no_spt'
+
+
+
+	if xx[0]=='N':
+		xscan='stare'
+	else: 
+		xscan='scan'
+
+
+	return xscan  
+	
+
 # End utilities
 
 # Routines for making and updating the summary file
@@ -615,8 +646,9 @@ def make_sum_file(fileroot='observations',new='no'):
 
 
 	# Read the entire observations.ls file
+	print '# (Re)Making summary file'
 	records=read_ordered_list0(fileroot)
-	print '# The number of records in the per_list file is %d' % (len(records))
+	print '# The number of records in the old per_list file is %d' % (len(records))
 
 	gmt=time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime())
 
@@ -785,6 +817,8 @@ def make_ordered_list(fileroot='observations',apertures='full',filetype='flt',ne
 	Note - This could be done as a true database, but it's 
 	simpler for now just to make it a file
 
+	This routine still uses iraf.hselect
+
 	100308 - Added option to deal with other types of files aside from flt files.  The 
 		assumption made is that the filetype is part of the filename
 	100427 - Added crval1 and crval2 to output list because want to use this to determine
@@ -805,21 +839,12 @@ def make_ordered_list(fileroot='observations',apertures='full',filetype='flt',ne
 		resolve situations in which multiple versions of the same file are in the
 		directory structure.  The choice is only accurate to the day
 	130820	Revised the way in which searched for the date in raw data files.
+	140306	Add capability to check for scanned observations.
 	'''
 
 	if filetype!='flt':
 		fileroot=fileroot+'_'+filetype
 
-	# if os.path.exists(fileroot+'.ls') and new!='yes':
-	# 	x=raw_input('%s.ls already exists. Do you want to make a new one?  y/n ' % fileroot )
-	# 	x=x.strip()
-	# 	# print x,x[0]
-
-	# 	if x[0]=='n' or x[0]=='N':
-	# 		print 'Keeping old %s.ls file' % fileroot
-	# 		return []
-	# 	else:
-	# 		print 'Making a new %s.ls file' % fileroot
 
 	backup(fileroot+'.ls')
 	os.system('find . -follow -name \*%s.fits  -print 1>files.ls 2>/tmp/foo; rm /tmp/foo' % filetype)
@@ -834,8 +859,12 @@ def make_ordered_list(fileroot='observations',apertures='full',filetype='flt',ne
 	if len(lines)==0:
 		print 'There were no %s files in the directory structure' % filetype
 		return []
+	else:
+		print 'There are %d datasets to process' % len(lines)
 
+	i=0
 	for line in lines:
+
 		line=line.strip()
 		line=line.split()
 
@@ -858,21 +887,25 @@ def make_ordered_list(fileroot='observations',apertures='full',filetype='flt',ne
 			# Another kludge for raw files.  The is no 'date' field in the first extension as there is for flt and ima files, but DATE does exist in extension 0
 			if filetype=='raw':
 				xname=per_fits.parse_fitsname(xfile,0,'yes')
-				# xx=pyraf.iraf.hselect(xname[2],'$I,IRAF-TLM','yes',Stdout=1)
 				xx=pyraf.iraf.hselect(xname[2],'$I,DATE','yes',Stdout=1)
 				xx=xx[0].split('\t')
 				x.append(xx[1])
 
+			scan=check4scan(xfile)
+
 			if x[5]=='IR':
-				# j=string.count(x[11],'SUB')
+				x[4]=scan
 				j=string.count(x[9],'SUB')
-				# print 'test ',j,apertures
 				if j == 0 or apertures != 'full':
 					records.append(x)
 					times.append(float(x[6]))
 		else: 
 			print 'File %s does not really exist' %  xfile
+		i=i+1
+		if i%100 == 1:
+			print 'Inspected %6d of %6d datasets --> %6d IR datasets' % (i,len(lines),len(records))
 
+	print 'Inspected %6d of %6d datasets --> %6d IR datasets' % (i,len(lines),len(records))
 	
 
 	if len(times)==0:
@@ -895,6 +928,8 @@ def make_ordered_list(fileroot='observations',apertures='full',filetype='flt',ne
 
 	# Now write the time sorted file
 	write_ordered_list(fileroot,time_sorted)
+
+	print '# Completed creating %s.ls' % (fileroot)
 
 	return time_sorted
 	
@@ -940,7 +975,7 @@ def write_ordered_list(fileroot='observations',records=[]):
 		xstring=xstring+'%-5s ' % record[14] # targname
 		xstring=xstring+'%-5s ' % record[15] # Assn_id 
 		xstring=xstring+'%-5s ' % record[16] # PI      
-		xstring=xstring+'%-5s ' % record[17] # PI      
+		xstring=xstring+'%-5s ' % record[17] # File creation date
 		f.write('%-5s\n' % xstring)
 		i=i+1
 	f.close()

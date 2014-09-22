@@ -26,6 +26,7 @@ History:
 121220 ksl Removed pyraf dependencies after adding a routine to
 	   to get keywords form files
 130909 ksl Standardized printed error messages
+140310 ksl Switched to astropy for fits IO
 
 '''
 
@@ -33,7 +34,7 @@ import sys
 import os
 
 # import pyraf
-import pyfits
+from astropy.io import fits as pyfits
 import pylab
 import numpy
 import string
@@ -247,6 +248,72 @@ def get_keyword(filename,exten,keywords='bunit',default='Unknown'):
 
 
 
+def put_keyword(filename,exten,keyword='bunit',value='electrons'):
+	'''
+	Put or update a keyword in a file.  If the keyword does not exist
+	it will be added.
+
+	Filename and extension are required.  (If the filename 
+	contains and extension it will be ignored)
+	
+	keyword is a string which contains the keyword 
+
+	value is a number or a string.  However it is entered
+	that is the way ti will appear in the file
+
+
+	Notes:
+
+
+	140605 ksl Added
+	'''
+
+	# Next line means that you must always provide the exentsion
+	name=parse_fitsname(filename,exten,'yes')
+
+
+	try:
+		z=pyfits.open(name[0],mode='update')
+	except IOError:
+		print 'Error: put_keyword: file %s not found' % filename
+		return default
+
+	try:
+		zero_ext=z[0]
+		one_ext=z[name[1]]
+	except IndexError:
+		print 'Error: put_keyword: %d exceeds the number of extensions in file %s' % (exten,filename)
+		return 
+
+
+	# Determine where the header keyword is
+
+	try:
+		x=one_ext.header[keyword]
+		one_ext.header[keyword]=value
+		z.close()
+		return
+	except KeyError:
+		pass
+
+
+	try:
+		x=zero_ext.header[keyword]
+		zero_ext.header[keyword]=value
+		z.close()
+		return
+	except KeyError:
+		pass
+
+
+	print 'Error: put_keyword: keyword %s not found in either extension' % keyword
+
+	z.close()
+
+	return 
+
+
+
 
 def get_image(filename='./11740/ib1cc5gwq_flt.fits',exten=1,rescale='no',fill=0,fileref='none',section=[]):
 	'''
@@ -275,6 +342,8 @@ def get_image(filename='./11740/ib1cc5gwq_flt.fits',exten=1,rescale='no',fill=0,
 
 	The purpose of this routine is to allow one to track persistence from sub_arrays to full frame images,
 	and vice versus.  
+
+	The image is actually read by the routine get_image_ext
 
 	History
 
@@ -379,6 +448,7 @@ def get_image_ext(filename,exten=1,rescale='no'):
 
 	101213	ksl	Added option to include the flush time in the exposure.  
 	121220	ksl	Removed pyraf.iraf dependency
+	140606	ksl	Modified so returns an empty numpy array when it fails, instead of a list
 	'''
 
 	# Note 'yes' means that even if the filename includes and extension the name that will 
@@ -395,25 +465,15 @@ def get_image_ext(filename,exten=1,rescale='no'):
 		f.close()
 	except IOError:
 		print 'Error: per_fits.get_image_ext: %s does not appear to exist' % filename
-		return []
+		return numpy.array([])
 
 	if data==None:
 		print 'Error: per_fits.get_image.ext: %s exists, but returns None for ext.%d' % (filename,exten)
-		return []
+		return numpy.array([])
 
 	if rescale=='no':
 		return data
 	
-	# Code below is old 121220  ksl - remove when satisfied
-	# Determine whether the image has been exposure corrected and the exposure time  
-	# xxxx=pyraf.iraf.hselect(xname[2],'exptime,unitcorr,bunit','yes',Stdout=1)
-	# try:
-	# 	xxxx=xxxx[0].split('\t')
-	# except IndexError:
-	# 	print 'Error: per_fits.get_image_ext: hsel did not return anything to split'
-	# 	print 'xxxx was',xxxx
-	# 	return []
-
 	# print 'try',xname
 	xxxx=get_keyword(xname[0],exten=xname[1],keywords='exptime,unitcorr,bunit',default='Unknown')
 	# print 'new',xxxx
@@ -430,8 +490,6 @@ def get_image_ext(filename,exten=1,rescale='no'):
 		units='e'
 
 	
-	# Code below is old 121220  ksl - remove when satisfied
-	# texp=eval(xxxx[0])
 	texp=xxxx[0]
 
 	if units=='counts' and rescale != 'none':
@@ -495,6 +553,7 @@ def rewrite_fits(oldname='old.fits',newname='new.fits',ext=1,data=dummy,clobber=
 def get_times(filename):
         '''
 	Return the beginning and end times for an image as [t1,t2]
+	by reading the keywords expstart and expend
 
 	If the file is missing, an empty list is returned
 
@@ -511,15 +570,6 @@ def get_times(filename):
 		return []
 	return xxxx
 
-	# Old 121220
-	# xxxx=pyraf.iraf.hselect(xname[2],'expstart,expend','yes',Stdout=1)
-	# print 'get_times', filename,xxxx
-	# try:
-	# 	xxxx=xxxx[0].split('\t')
-	# 	return [eval(xxxx[0]),eval(xxxx[1])]
-	# except IndexError:
-	# 	print 'get_times: hsel did not work for file %s ' % xname[2]
-	# 	return []
 
 
 

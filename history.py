@@ -48,7 +48,7 @@ def open_log(filename,option='w'):
 
 	if filename!='':
 		current_name=filename
-	log('# %s\n ' % filename,option=option)
+	log('# %s\n' % filename,option=option)
 	return
 
 def log(string,filename='',option='a'):

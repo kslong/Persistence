@@ -154,6 +154,14 @@ def fixup(x,dq):
 	'''
 	Use the dq image, to find and fix values in the bright image that are likely saturated but 
 	have low apparent signal.
+
+	Notes:
+	With older versions of the WRC3 pipeline, saturated pixels in the cores of bright stars were often 
+	set to zero.  With the cores set to zero, the estimate of persistence for these were zero.  This
+	is an attempt to set the value of a pixel to something plusible.  Newer versios place a large value
+	in the pixel, which avoids this preblem.  
+
+	Though better than no estimate at all, what's here still leaves a lot to be desired.
 	'''
 
 	
@@ -341,6 +349,7 @@ def do_dataset(dataset='ia21h2e9q',norm=0.3,alpha=0.2,gamma=0.8,e_fermi=80000,kT
 	110324	ksl	Changed call to accommodate new persistence model
 	110602	ksl	Incorporated the possibility of providing a correction file xynorm to account
 			for spatial variations across the detector persistence model
+	140606	ksl	Added correction which puts the correct units in the stimulus file.
 	'''
 
 	cur_time=date.get_gmt()
@@ -458,15 +467,23 @@ def do_dataset(dataset='ia21h2e9q',norm=0.3,alpha=0.2,gamma=0.8,e_fermi=80000,kT
 		cur_sci_fil=record[10]
 		cur_sci_exp=eval(record[11])
 		cur_sci_obj=record[14]
+		scan=record[4]
 
-		x=get_image(record[0],1,'e',fileref=science_record[0])  # Convert this to electrons
+		xfile=record[0]
+		# Use the ima file, if file calusing persistence is a scan object
+		if scan=='scan':
+			xfile=xfile.replace('flt','ima')
+			print 'Using ima file for ',record[0],xfile,scan
+
+
+		x=get_image(xfile,1,'e',fileref=science_record[0])  # Convert this to electrons
 		if len(x)==0:
 			xstring='NOK: Problem with science extension of %s' % record[0]
 			history.write('%s\n' % xstring)
 			print xstring
 			return xstring
 
-		dq=get_image(record[0],3,fileref=science_record[0])     # Get the dq 
+		dq=get_image(xfile,3,fileref=science_record[0])     # Get the dq 
 		if len(dq)==0:
 			xstring = 'NOK: Problem with dq extension of %s' % record[0]
 			history.write('%s\n' % xstring)
@@ -508,7 +525,11 @@ def do_dataset(dataset='ia21h2e9q',norm=0.3,alpha=0.2,gamma=0.8,e_fermi=80000,kT
 		history.write('%s\n' % string)
 
 		# Summarize the Stiumulus printing out the filename, prog_id, visit_name, target, dt and the number of pixels above saturation of 70000
-		stimulus_summary='Stimulus: %40s %10s %10s %20s %8.0f %3d\n' % (record[0],cur_progid,cur_visit,cur_sci_obj,dt,xvalues[1])
+		scan='No'
+		if record[4]=='scan':
+			scan='Yes'
+
+		stimulus_summary='Stimulus: %40s %10s %10s %20s %8.0f %3d %3s %6s\n' % (record[0],cur_progid,cur_visit,cur_sci_obj,dt,xvalues[1],record[9],scan)
 		history.write('! %s\n' % stimulus_summary)
 
 		if i==last_external:
@@ -579,7 +600,7 @@ def do_dataset(dataset='ia21h2e9q',norm=0.3,alpha=0.2,gamma=0.8,e_fermi=80000,kT
 	units=get_keyword(science_record[0],1,'bunit')
 	# print 'test',units
 	if units[0]=='COUNTS/S':
-		print 'reducing'
+		print 'Reducing model to match units for dataset %s to match %s ' % (dataset,units)
 		persist/=2.4
 
 	# subtract and write out the corrected image
@@ -601,6 +622,8 @@ def do_dataset(dataset='ia21h2e9q',norm=0.3,alpha=0.2,gamma=0.8,e_fermi=80000,kT
 	rewrite_fits(xname[0],persist_file,1,persist)
 	rewrite_fits(xname[0],corrected_file,1,science)
 	rewrite_fits(xname[0],stimulus_file,1,stimulus)
+	# 140606 - Fix added to put stimulus file in the correct units.
+	put_keyword(stimulus_file,1,'bunit','ELECTRONS')
 	rewrite_fits(xname[0],time_file,1,xtimes)
 	if len(ext_persist)>0:
 		rewrite_fits(xname[0],ext_persist_file,1,ext_persist)

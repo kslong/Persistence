@@ -153,7 +153,17 @@ def add_list(lines):
 
 	return string
 
+def preformat(lines):
+	'''
+	Add a set of preformated lines, that is text.
+	'''
 
+	string='<pre>'
+	for line in lines:
+		line=line.replace('\n','')
+		string=string+line+'<br>'
+	string=string+'</pre>'
+	return string
 
 def test(filename='test.html'):
 	'''
@@ -183,6 +193,10 @@ def test(filename='test.html'):
 	line=['Hi Knox','Goodbye Knox']
 
 	string=string+add_list(line)
+
+	lines=['this is test of preformating\n','hello','world','tomorrow is another day']
+
+	string=string+preformat(lines)
 
 	string=string+end()
 

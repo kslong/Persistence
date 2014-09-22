@@ -45,7 +45,7 @@ def read_history(history_file):
 	
 	line=f.readline()
 	keep=[]
-	table_stimulus=[['Filename','Program Id','Visit','Target','dt (sec)','# Saturated Pixels']]
+	table_stimulus=[['Filename','Program Id','Visit','Target','dt (sec)','# Saturated Pixels','Aperture','Scan']]
 	table_sum=[['Type of Persistence','% Pix > 0.1 e/s','% Pix >0.03 e/s','% Pix >0.01 e/s']]
 	while line !='':
 		line=line.strip()
@@ -128,6 +128,7 @@ def do_dataset(dataset='ia21h2eaq',fileroot='observations',local='no'):
 	110203	ksl	Added local swithch which controls where the
 			real working directory is to make testing
 			easier
+	140307	ksl	Added information about scans and subarray observations
 	'''
 
 	record=per_list.read_ordered_list_one(fileroot,dataset)

@@ -23,6 +23,10 @@ Description:
 
 Primary routines:
 
+	The main routine is do_dataset.  This is the
+	routine that is called if subtract_eval is 
+	executed from the command line
+
 Notes:
 	The evaluation images are generated here, but
 	they are not put into an html file
@@ -44,9 +48,11 @@ import per_fits
 def read_peaks(file_xy):
 	'''
 	read the file containing the positions of
-	the peaks in the persistence image (or
-	any simple ascii file with an xy position
-	in each row
+	the peaks in the persistence image (that is
+	any simple ascii file with an x y position and the predicted peristence
+	in each row)
+
+	This routine is called from do_dataset
 
 	110722 - Added code to read the brightness of the predicted persistence
 
@@ -537,7 +543,6 @@ def get_stats(x,y,xmin,xmax):
 if __name__ == "__main__":
 	import sys
 	if len(sys.argv)>1:
-		# do_dataset(int(sys.argv[1]))
 		do_dataset(sys.argv[1])
 	else:
 		print 'usage: .subtract_eval.py  dataset'
