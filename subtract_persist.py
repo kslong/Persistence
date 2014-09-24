@@ -8,10 +8,11 @@ Synopsis:
 This routine is a routine to subtract the persistence 
 from one or more images.  
 
-This is version 2 of this routine and includes an extra term
-in the model of persistence at any one time.
+This version supports two types of models:
+	those based on a modified ferrmi formula and
+	those based on power laws which depend on expousre time and fluence
 
-The routine requetss a file created by per_list.py that contains
+The routine requets a file created by per_list.py that contains
 a time-order list of flt files
 
 The outputs include one or more  persistence images, subtracted flt files
@@ -32,15 +33,15 @@ In general, per_list.py should have been run previously
 Basic usage is as follows
 
 subtact_persist.py dateset   - process a single dataset
-subtract_persist2.py -all      - process all of the datasets in the .ls file
-subtract_persist2.py -all [-after time1]  [-before time2] - process the datasets
+subtract_persist.py -all      - process all of the datasets in the .ls file
+subtract_persist.py -all [-after time1]  [-before time2] - process the datasets
 	that are in the .ls when the observations occured after time1 and/or before time2
 	time1 and time2 are either MJD or ISO formated times, e.g '2009-11-12 15:13:24'
-subtract_persist2.py -many file.ls - proces a list of dataset names (one dataset per line)
+subtract_persist.py -many file.ls - proces a list of dataset names (one dataset per line)
 
-subtract_persist2.py -obslist obsers2.ls  - specifices something other than the normal
+subtract_persist.py -obslist obsers2.ls  - specifices something other than the normal
 	observation.ls file to use.
-subtract_persist2.py -ds9  - causes ds9 to start up and various files to be displayed in
+subtract_persist.py -ds9  - causes ds9 to start up and various files to be displayed in
 	ds9 during processing
 subtract_persisty.py -local - causes the output files to be written in a subdirectory
 	of the current working directory instead of with the original flt files as
@@ -48,6 +49,9 @@ subtract_persisty.py -local - causes the output files to be written in a subdire
 
 Other switches allow you to control the persistence function that is subtracted, e. g.
 
+-model  -- 0 for the original fermi-function based formalisim
+	   1 for the newer purely observational formula
+	   2 for a fermi function with modified for different stimulus exposure times
 -gamma	-- The power law time decay
 -n	-- The normalization at 1000 s
 -e	-- The fermi energy, nominally the place where the fermi distribution reaches half
@@ -60,6 +64,18 @@ Other switches allow you to control the persistence function that is subtracted,
 		with values larger or smaller than this indicating the sensitivity to persistence.
 		this file is multipled with the overall model
 -xynorm none -- Do not make a spatially dependent correction.
+
+Calibration files:
+
+	subtract_persist uses certain calibration files that can be located in the directory 
+	from which subtract_persist is being run, a subdirectory that has to be names PerCal
+	or in a directory defined by an environment variable PERCAL.  
+
+	At present the calibration files that are needed are 
+
+	persist_corr.fits 
+	a_gamma.fits
+	fermi.fits
 
 Outputs:
 
@@ -85,7 +101,16 @@ History:
 		Modified so that all of the files have the same units as the file
 		to be analyzed, even though the base calculation of the model in
 		in e/s
-
+140609	ksl	Began to incoporate a new model into this routine.  For now at least, we will retain
+		the old model as well. This is a complication, but it may be some time before this
+		works well.
+140805	ksl	At this point in time, subtract supports 3 different models, the original one, and
+		one based on a gamma style fits to datasets with different exposure times, and one
+		based of fermi fits to different times.  As of this date, the calibration files that
+		are needed to run subtract can be found either in the local directory, a subdirectory
+		called PerCal or in a directory defined by the environment variable PERCAL
+140924	ksl	Incorporated my test version  of subtract, called xsubtract into the standard persistence
+		package.
 '''
 
 import os
@@ -97,10 +122,346 @@ import string
 import date
 import per_list
 from per_fits import *
+import astropy.io.fits
 from ds9 import *
 from date import *
 
+from scipy.interpolate import interp1d
 
+
+# This is the section where the new a gamma model is calculated 
+# These are the global variables which hold the models
+model_exp=[]
+model_stim=[]
+model_a=[]
+model_g=[]
+model_file=''
+
+
+def read_file(filename,char=''):
+	'''
+	Read a file and split it into words, eliminating comments
+	
+	char is an optional parameter used as the delimiter for
+	splitting lines into words.  Otherwise white space is
+	assumed.
+
+	History:
+	
+	110729	ksl	Added optional delimiters
+	140617  ksl	Included here so that the A gamma models 
+			could be read in.  
+	'''
+
+	try:
+		f=open(filename,'r')
+		xlines=f.readlines()
+		f.close()
+	except IOError :
+		print "The file %s does not exist" % filename
+		return []   
+	
+	lines=[]
+	
+	i=0
+	while i<len(xlines):
+		z=xlines[i].strip()
+		if char=='':
+			z=z.split()
+		else:
+			z=z.split(char)
+		if len(z)>0:
+			if z[0][0]!='#':
+				lines=lines+[z]
+		i=i+1
+	return lines
+
+def read_models(filename='per_fermi/fermi.fits'):
+	'''
+	Read in the fits models for A gamma style models
+
+
+	Notes:
+
+	Fits reading returns numpy.arrays, which unfortunalely
+	do not perform identically to lists in the situation
+	where one wants to append rows to one another.  The
+	equvalent on append for a list, is vstack, but it works
+	differently in the sense that one has to say
+
+	y=numpy.vstack((y,z))
+
+	to produce a new y
+
+	A way to avoid this is to make the outside maxtrix a list and then
+	convert it to an array at the end.
+
+	140803	ksl	Coded
+	140805	ksl	Replaced older read_models routine
+	'''
+
+	global model_exp
+	global model_stim
+	global model_a
+	global model_g
+	global model_file
+	if filename==model_file and len(model_stim)>0:
+		return 'OK'
+
+	xfilename=locate_file(filename)
+
+
+	try:
+		x=astropy.io.fits.open(xfilename)
+	except IOError:
+		print 'read_models: file %s does not appear to exist' % filename
+		return 'NOK'
+
+	i=1
+	model_exp=[]
+	model_a=[]
+	model_stim=[]
+	model_g=[]
+	while i<len(x):
+		model_exp.append(x[i].header['exp'])
+		tabdata=x[i].data
+
+		one_stim=tabdata['stim']
+		model_stim.append(one_stim)
+
+		one_a=tabdata['a']
+		model_a.append(one_a)
+
+		one_gamma=tabdata['gamma']
+		model_g.append(one_gamma)
+		# print 'diag', one_stim.shape
+		i=i+1
+	
+	model_stim=numpy.array(model_stim[0]) # Use only the first row for the stimulus
+	model_a=numpy.array(model_a)
+	model_g=numpy.array(model_g)
+
+	
+
+
+	print 'read_models:',model_stim.shape,model_a.shape,model_g.shape
+
+	model_file=filename
+
+	return
+
+
+
+	
+
+
+
+
+
+
+def read_models_orig(filename='per_model/models.ls'):
+	'''
+	Read in the ascii model files for the A gamma models
+
+	Notes:
+		Ultimately a better format for the model files hould be writtne at which point
+		this routine will need to be rewritten
+
+	140617	ksl	Coded without ksl.io
+	140804 	ksl	This is replaced by the new read_models, and SHOULD BE REMOVED ONCE
+			I AM SURE THERE IS NO RESIDUAL PROBLEM WITH READING THE FITS FILES.
+	'''
+
+
+	global model_exp
+	global model_stim
+	global model_a
+	global model_g
+	global model_file
+	if filename==model_file and len(model_stim)>0:
+		return 'OK'
+
+	if filename.count('.fits')>0:
+		read_models2(filename)
+		return 
+
+
+	model_exp=[]
+	model_stim=[]
+	model_a=[]
+	model_g=[]
+
+	lines=read_file(filename)
+	if len(lines)==0:
+		return 'NOK'
+
+	i=0
+	for line in lines:
+		model_exp.append(eval(line[1]))
+		xlines=read_file(line[0])
+		a=[]
+		g=[]
+		for xline in xlines:
+			if i==0:
+				model_stim.append(eval(xline[0]))
+			a.append(eval(xline[1]))
+			g.append(eval(xline[2]))
+		model_a.append(a)
+		model_g.append(g)
+		i=i+1
+	model_exp=numpy.array(model_exp)
+	model_stim=numpy.array(model_stim)
+	model_a=numpy.array(model_a)
+	model_g=numpy.array(model_g)
+	# print model_exp.shape,model_stim.shape,model_a.shape,model_g.shape
+
+
+	model_file=filename
+	print 'read_models: Finished reading ',filename
+
+	print 'test',model_exp
+
+	print model_stim.shape,model_a.shape,model_g.shape
+	
+def locate_file(filename):
+	'''
+	This routine locates a file in one of several places in priority order
+	and returns the path to the file
+
+	In the directory where a program is being run
+	In a directory PerCal underneath the directory where the program is being run
+	In a directory defined by an external variable PERCAL
+
+	If the file is not found then the routine returns an empty string
+
+	Notes:
+
+	This was coded so that by defining an environment variable then subtract_persist
+	should work everywhere.  
+
+
+
+	
+
+	History:
+
+	140805	ksl	Initially coded
+	'''
+
+	if os.path.isfile(filename):
+		return filename
+
+	xfile='PerCal/'+filename
+	if os.path.isfile(xfile):
+		return xfile
+
+	try:
+		xpath=os.environ['PERCAL']
+	except KeyError:
+		print 'Error: subtract_persist.locate_file: Environment variable PERCAL not defined and %s not found either in local directory or PerCal subdiretory' % filename
+		return ''
+
+	xfile='%s/%s' % (xpath,filename)
+	if os.path.isfile(xfile):
+		return xfile
+	
+	print 'Error: subtract_persist.locate_file: %s not found in the local directory, the PerCal subdiretory, or in the direcotry %s defined by PERCAL' % (filename,xpath)
+	return ''
+
+def get_persistence(exp=300.,dt=1000.,models='per_model/models.ls'):
+	'''
+	Calculate the persistence curve using the tabulated A_gamma model
+
+	where:
+
+	exp	the expousre of the stimulus image
+	dt	the time since the stimulus image was taken
+	models	the file containing times and links to the persitance
+		curves
+
+	We need to interpolate both for the actual stimulus and
+	for the fact that we don't have a grid of exposures.
+
+	This just returns the persistence curve (on a specific grid) for a given exposure
+	time exp and delta time dt.
+
+	Note:
+
+	Although this was initially developed for a phenomenalogical model where an 
+	amplitude and a power law index had be calculated but fitting observatonal data, 
+	any model with includes a power law decay can be case in the from of the so-called
+	A-gama model, including a fermi-type model.
+
+	History:
+
+	140630	ksl	Added a variable models to allow one to read files in any directory
+			of interest
+
+	'''
+
+	# if len(model_stim)==0:
+	# 	print 'Reading models',models
+	# 	read_models(models)
+	read_models(models)
+
+	
+	# print 'get_persistence:',len(model_exp),len(model_stim),len(model_a),len(model_g)
+	
+	# Now we need to interpolate so we have a single model given
+	# an exposure time
+	i=0
+	while i<len(model_exp) and model_exp[i]<exp:
+		i=i+1
+
+	# print 'get_persitence:',i,len(model_exp),model_exp[i],exp
+
+	if i==0:
+		persist=model_a[0]*(dt/1000.)**-model_g[0]
+	elif i==len(model_exp):
+		i=i-1
+		persist=model_a[i]*(dt/1000.)**-model_g[i]
+	else:
+		frac=(exp-model_exp[i-1])/(model_exp[i]-model_exp[i-1])
+		persist1=model_a[i-1]*(dt/1000.)**-model_g[i-1]
+		persist2=model_a[i]*(dt/1000.)**-model_g[i]
+		persist=(1.-frac)*persist1+frac*persist2
+		# Note as written, frac is the frac of model for the longer exposure to include
+		# print 'get_persistence: time',exp,model_exp[i-1],model_exp[i]
+		# print 'get_persistence: frac',frac,'low',i-1,'hi',i
+
+	return persist
+
+def make_persistence_image(x,exptime=500,dt=300,models='per_model/models.ls'):
+	'''
+	Make the persistence image for the A gamma model, given 
+	
+	an image array x,
+	an exposure time for the stimulus image exptime.
+	a time since the end of the (last) stimulus image
+	a file that contains pointers to the individual persistence amplitude curve
+
+	Note that this routine calls get_persistenee, which returns a persistence curve
+	for a particular exptime and dt. The persistence curve is on a fixed grid. Here we
+	use scipy.inter1d to produce the persisence image.
+	'''
+
+	# print 'make_persistence',exptime,dt,models
+
+	persist_curve=get_persistence(exptime,dt,models)
+
+	# print 'OK got to make_persistence_image:',len(model_stim),len(persist_curve)
+
+	# print 'make_persistence: persist_curve:',persist_curve[0:400:10]
+
+	# Now we need to interpolate this curve
+	f=interp1d(model_stim,persist_curve,fill_value=0,bounds_error=False)
+
+	persist=f(x)
+
+	return persist
+
+
+# These are the routines used to calculate the original fermi formula based model
 
 def calc_fermi(x,norm=1.0,e_fermi=80000,kt=20000,alpha=0.2):
 	'''
@@ -201,7 +562,7 @@ def fixup(x,dq):
 	
 
 
-def calc_persist(x,dq,dt=1000,norm=0.3,alpha=0.2,gamma=0.8,e_fermi=80000,kT=20000):
+def calc_persist(x,dq,dt=1000,norm=0.3,alpha=0.159,gamma=1.022,e_fermi=83400,kT=18500):
 	'''
 	Calculate the persistence of a single image at dt in seconds.  The persistence
 	image is returned.
@@ -218,7 +579,8 @@ def calc_persist(x,dq,dt=1000,norm=0.3,alpha=0.2,gamma=0.8,e_fermi=80000,kT=2000
 			number of times an image is read and to allow for subarrays
 	110926	ksl	Fixed to avoid the problem due to the very occassional absence
 			of a dq array
-
+	140812  ksl	Changed parameters to reflect the best of a collection of 
+			visits from Cycle 21 program (in prep for cal workshop)
 
 	'''
 
@@ -314,11 +676,14 @@ def get_stats(image,saturation=70000):
 
 
 
-def do_dataset(dataset='ia21h2e9q',norm=0.3,alpha=0.2,gamma=0.8,e_fermi=80000,kT=20000,fileroot='observations',ds9='yes',local='no',xynorm='persist_corr.fits'):
+def do_dataset(dataset='ia21h2e9q',model_type=0,norm=0.3,alpha=0.2,gamma=0.8,e_fermi=80000,kT=20000,fileroot='observations',ds9='yes',local='no',xynorm='persist_corr.fits'):
 	'''
 	Create a persistence image for this dataset.  This version works by creating using the 
 	persistance model from each of the previous images.  It assumes that the only one which
 	matters is the image which created the most persistence according toe the modeld
+
+	model_type=0 is our ourignal model which has a modified fermi distributioon, controlled by the values of norm, etc.
+	model_type=1 is our purely describtive model defined in terms of amplitudes and power laws
 
 	All returns from this program should be:
 		OK:  something
@@ -350,15 +715,27 @@ def do_dataset(dataset='ia21h2e9q',norm=0.3,alpha=0.2,gamma=0.8,e_fermi=80000,kT
 	110602	ksl	Incorporated the possibility of providing a correction file xynorm to account
 			for spatial variations across the detector persistence model
 	140606	ksl	Added correction which puts the correct units in the stimulus file.
+	140611	ksl	Began to add in new persistnce model, initially just by short-circuiting everything
+	140803	ksl	Switched to fits version of data files
 	'''
 
 	cur_time=date.get_gmt()
 
-	print '# Processing dataset %s Norm %4.2f alpha %4.2f gamma %4.2f e_fermi %6.0f kT %6.0f ' % (dataset,norm,alpha,gamma,e_fermi,kT)
+	if model_type==0:
+		print '# Processing dataset %s Norm %4.2f alpha %4.2f gamma %4.2f e_fermi %6.0f kT %6.0f ' % (dataset,norm,alpha,gamma,e_fermi,kT)
+	elif model_type==1:
+		print '# Processing dataset %s with a gamma model' % dataset
+	elif model_type==2:
+		print '# Processing dataset %s with a tiem-variable fermi model' % dataset
+	else:
+		print '# Error: run_persist: Unknown model type %d' % model_type
+		return 'NOK'
 
 	# Read the observations file to get the data set of interest
 
-	delta=8  # Hardwired value for consideration of persistence.  Datasets which occurred more than delta hours earlier not considered.
+	# delta=8  # Hardwired value for consideration of persistence.  Datasets which occurred more than delta hours earlier not considered.
+	# Increased to 16 hours 140617
+	delta=16  # Hardwired value for consideration of persistence.  Datasets which occurred more than delta hours earlier not considered.
 
 	records=per_list.read_ordered_list2(fileroot,dataset,interval=[-delta,0],outroot='none')
 
@@ -404,13 +781,16 @@ def do_dataset(dataset='ia21h2e9q',norm=0.3,alpha=0.2,gamma=0.8,e_fermi=80000,kT
 	history.write('! Exposure:  %6.1f\n' % sci_exp)
 	history.write('! Object:    %s\n' % sci_obj)
 
-	history.write('\n! Persistence model: norm %6.2f alpha %6.2f e_fermi %6.0f kT %6.0f\n' % (norm,alpha,e_fermi,kT)) 
+	if model_type==0:
+		history.write('\n! Persistence model: norm %6.2f alpha %6.2f e_fermi %6.0f kT %6.0f\n' % (norm,alpha,e_fermi,kT)) 
+	elif model_type==1:
+		history.write('\n! Proecessing dataset %s with a gamma model' % dataset)
 
 
 	# Check whether there is anything to do
 
 	if len(records)==1:
-		string='subtract_persist: No persistence for this dataset.  No earlier observations within %.1f hours\n' % (delta)
+		string='subtract_persist: No persistence for this dataset.  No earlier observations within %4.1f hours\n' % (delta)
 		history.write('%s\n' % string)
 		history.write('! Persistence:  None\n')
 		string='OK: subtract_persist: -- None'
@@ -422,8 +802,11 @@ def do_dataset(dataset='ia21h2e9q',norm=0.3,alpha=0.2,gamma=0.8,e_fermi=80000,kT
 
 
 
+	# Persistence is calculated for the middle of the interval in which the expousre
+	# was taking place
+
 	[t1,t2]=get_times(science_record[0])
-	tbright=0.5*(t1+t2)
+	tscience=0.5*(t1+t2)  
 
 	# establish which record is the last record that comes from a different visit than the current one
 
@@ -446,6 +829,7 @@ def do_dataset(dataset='ia21h2e9q',norm=0.3,alpha=0.2,gamma=0.8,e_fermi=80000,kT
 	ext_persist=[] # This is a place holder for storing the extenal persistence
 
 	if xynorm!='':
+		xynorm=locate_file(xynorm)
 		xcorr=get_image(xynorm,1)
 		if len(xcorr)==0:
 			xynorm=''  # This is an error because we were unable to find the file
@@ -453,13 +837,15 @@ def do_dataset(dataset='ia21h2e9q',norm=0.3,alpha=0.2,gamma=0.8,e_fermi=80000,kT
 
 
 
-	# Now we start actually creating the persistence model
+	# This is the beginning of the loop for calculating the persistence model
 	i=0
 	while i<len(records)-1:
 		record=records[i]
-		# print 'xxx ',i,len(records),record[0]
+		print 'subtract: %30s %6.1f model_type %d' % (record[0],eval(record[11]),model_type)
+		# dt is measured from the end of the stimulus image to the middle of the
+		# science image
 		[t1,t2]=get_times(record[0])
-		dt=(tbright-t2)*86400
+		dt=(tscience-t2)*86400
 
 		cur_progid=record[2]
 		words=record[3].split('.')
@@ -491,15 +877,31 @@ def do_dataset(dataset='ia21h2e9q',norm=0.3,alpha=0.2,gamma=0.8,e_fermi=80000,kT
 			# 110926 - ksl - modified to allow this to process the image even if there was no dq array
 			# return xstring
 
+		if model_type==0:
+			model_persistence=calc_persist(x,dq,dt,norm,alpha,gamma,e_fermi,kT)
+		elif model_type==1:
+			# print 'Model type is 1'
+			# model_persistence=make_persistence_image(x,cur_sci_exp,dt,'per_model/models.ls')
+			# model_persistence=make_persistence_image(x,cur_sci_exp,dt,'per_model/a_gamma.fits')
+			model_persistence=make_persistence_image(x,cur_sci_exp,dt,'a_gamma.fits')
+		elif model_type==2:
+			# print 'Model type is 2'
+			# model_persistence=make_persistence_image(x,cur_sci_exp,dt,'per_fermi/models.ls')
+			# model_persistence=make_persistence_image(x,cur_sci_exp,dt,'per_fermi/fermi.fits')
+			model_persistence=make_persistence_image(x,cur_sci_exp,dt,'fermi.fits')
+		else:
+			print 'Error: subtract_persist: Unknown model type %d' % model_type
+			return 'NOK'
+
+		values=how_much(model_persistence)
+
 		if i==0:
-			persist=calc_persist(x,dq,dt,norm,alpha,gamma,e_fermi,kT)
-			values=how_much(persist)
+			persist=model_persistence
 			stimulus=x   # This is an array which contains the maximum counts in a pixel
 			xtimes=numpy.ones_like(persist)
 			xtimes=xtimes*dt # This is an array containing the delta time at which the stimulus occured
 		else:
-			xpersist=calc_persist(x,dq,dt,norm,alpha,gamma,e_fermi,kT)
-			values=how_much(xpersist)
+			xpersist=model_persistence
 			stimulus=numpy.select([xpersist>persist],[x],default=stimulus)
 			xtimes=numpy.select([xpersist>persist],[dt],default=xtimes)
 			persist=numpy.select([xpersist>persist],[xpersist],default=persist)
@@ -538,6 +940,8 @@ def do_dataset(dataset='ia21h2e9q',norm=0.3,alpha=0.2,gamma=0.8,e_fermi=80000,kT
 
 		i=i+1
 	
+	# This is the end of the loop where the persistence model is calculated
+
 	# First report on the external persistence for this file;
 
 	# Now apply the fix to account for spatial variations in persistence
@@ -593,7 +997,7 @@ def do_dataset(dataset='ia21h2e9q',norm=0.3,alpha=0.2,gamma=0.8,e_fermi=80000,kT
 	history.write('! PersistenceSum: Total      %s\n'% measure)
 
 
-	# Now write out the persistence image
+	# Now write out all of the new fits files
 
 	# First find out the units of the science image
 
@@ -627,9 +1031,11 @@ def do_dataset(dataset='ia21h2e9q',norm=0.3,alpha=0.2,gamma=0.8,e_fermi=80000,kT
 	rewrite_fits(xname[0],time_file,1,xtimes)
 	if len(ext_persist)>0:
 		rewrite_fits(xname[0],ext_persist_file,1,ext_persist)
-		
 
-	# Get statistics on the images 
+	# This completes the section which writes out all of the fits files
+		
+	# Get statistics on the images and make the 4 panel plot 
+
         xmed=numpy.median(original)
         zmed=numpy.median(persist)
         zmax=numpy.max(persist)
@@ -678,23 +1084,35 @@ def do_dataset(dataset='ia21h2e9q',norm=0.3,alpha=0.2,gamma=0.8,e_fermi=80000,kT
 		else:
 			LoadFrame(stimulus_file,4,0,1e5,'histequ')
 
+	# Finished plots
+
+	# Finished everything so wrap it up
 	history.write('# Finished Persistence processing of file %s\n' % science_record[1])
 	history.close()
+
+	# Upadete the summary file
 	string='%20s %20s' % (emeasure,measure)
 	per_list.update_summary(dataset,'Persist',string,fileroot,append='no')
+
 	return string
 
 
 def steer(argv):
 	'''
 	This is a steering routine for subtract persist so that options can be exercised from the 
-	command line
+	command line.  
+	
+	Notes:
+	The switches are discussed in the documentation section at the tope
 
 	100907	ksl	Added to begin to automate the subtraction process
+	140617	ksl	Added new switches to account for the purely observational
+			alpha gamma models.
 	'''
 	i=1
 	dataset_list='none'
 
+	model_type=1
 	norm=0.3
 	alpha=0.2
 	gamma=0.8
@@ -713,6 +1131,9 @@ def steer(argv):
 		if argv[i]=='-h':
 			print __doc__
 			return    
+		elif argv[i]=='-model':
+			i=i+1
+			model_type=eval(argv[i])
 		elif argv[i]=='-n':
 			i=i+1
 			norm=eval(argv[i])
@@ -770,7 +1191,7 @@ def steer(argv):
 	
 	if dataset_list=='none': #  Then we are processing a single file
 		dataset=words[0]
-		do_dataset(dataset,norm,alpha,gamma,e_fermi,kT,fileroot,ds9,local,xynorm)
+		do_dataset(dataset,model_type,norm,alpha,gamma,e_fermi,kT,fileroot,ds9,local,xynorm)
 	# Note it is not clear to me what is going on here.  What distiguishes the next
 	# to options, and why isn't per_list being used  111019 -- ksl  !!!
 	elif dataset_list=='!All': # Then we are working from the obslist
@@ -785,7 +1206,7 @@ def steer(argv):
 				mjd=float(word[6])
 				print mjd,mjd_before,mjd_after
 				if mjd_after  <= mjd and mjd <= mjd_before:
-					do_dataset(word[1],norm,alpha,gamma,e_fermi,kT,fileroot,ds9,local,xynorm)
+					do_dataset(word[1],model_type,norm,alpha,gamma,e_fermi,kT,fileroot,ds9,local,xynorm)
 	else:
 		f=open(dataset_list,'r')
 		lines=f.readlines()
@@ -796,7 +1217,7 @@ def steer(argv):
 			if len(x)>0 and x[0]!='#':
 				mjd=float(x[6])
 				if mjd_after <= mjd and mjd <= mjd_before:
-					do_dataset(x,norm,alpha,gamma,e_fermi,kT,fileroot,ds9,local,xynorm)
+					do_dataset(x,model_type,norm,alpha,gamma,e_fermi,kT,fileroot,ds9,local,xynorm)
 	
 	return
 
@@ -812,6 +1233,6 @@ if __name__ == "__main__":
 	if len(sys.argv)>1:
 		steer(sys.argv)   
 	else:
-		print 'subtract_persist2.py  -h to get brief  help text'
+		print 'subtract_persist.py  -h to get brief  help text'
 	print 'OK done'
 	sys.exit(0)

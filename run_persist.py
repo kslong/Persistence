@@ -64,6 +64,10 @@ Other switches allow you to control the persistence function that is subtracted,
 
 Note that all of the numbers should be positive numbers!
 
+-model  -- 0 for the orginal fermi-function based formalism
+	   1 for the newer purely observational a gammma model
+	   2 for the variable fermi function with differrent prescriptions depending on the
+	     length of the exposre
 -n	-- The normalization at 1000 s
 -e	-- The fermi energy, nominally the place where the fermi distribution reaches half
 	    the maximum
@@ -100,6 +104,9 @@ History:
 		rise at very high stimulus levels.
 110721	ksl	Added a crude form of versioning
 121220	ksl	Updated documentation and cleaned up cals
+140923	ksl	Changed version number to 3.0 to reflect the fact that this will
+		be a major change in the software to allow for different types of
+		models
 
 '''
 
@@ -124,7 +131,7 @@ import subtract_html
 
 
 # Change this number when ever significant revisions of the S/W are made
-VERSION='2.1'
+VERSION='3.0'
 	
 
 def log(string,filename='history.log',option='a'):
@@ -146,7 +153,7 @@ def log(string,filename='history.log',option='a'):
 	return
 
 
-def do_dataset(dataset='ia21h2e9q',norm=0.3,alpha=0.2,gamma=0.8,e_fermi=80000,kT=20000,fileroot='observations',ds9='yes',local='no',xynorm='persist_corr.fits'):
+def do_dataset(dataset='ia21h2e9q',model_type=1,norm=0.3,alpha=0.2,gamma=0.8,e_fermi=80000,kT=20000,fileroot='observations',ds9='yes',local='no',xynorm='persist_corr.fits'):
 	'''
 
 	Run the persistence 'pipeline' for a single dataset.
@@ -168,6 +175,7 @@ def do_dataset(dataset='ia21h2e9q',norm=0.3,alpha=0.2,gamma=0.8,e_fermi=80000,kT
 	101215	ksl	Begain coding to provide a mechanism to control the running of
 			persistence suhtraction software for larger numbers of datasets
 	110103	ksl	Added local switch for testing
+	140929	ksl	Added new variable model_type to do_dataset, which is simply passed to subtract_persist.do_dataset.
 	'''
 
 
@@ -189,7 +197,7 @@ def do_dataset(dataset='ia21h2e9q',norm=0.3,alpha=0.2,gamma=0.8,e_fermi=80000,kT
 		return 'Error: Dataset not found at %s' % cur_time
 
 	# Carry out peristence subtraction for this dataset
-	string=subtract_persist.do_dataset(dataset,norm,alpha,gamma,e_fermi,kT,fileroot,ds9,local,xynorm)
+	string=subtract_persist.do_dataset(dataset,model_type,norm,alpha,gamma,e_fermi,kT,fileroot,ds9,local,xynorm)
 
 	log('%s\n' % string)
 	if string[0:3]=='NOK':
@@ -245,6 +253,7 @@ def steer(argv):
 	101215	ksl	Moved to a separate routine so that one would be able to split various portions
 			of persistence subtraction and evaluation of the results into multiple files
 	111114	ksl	Added a command.log to keep track of all of the run_persist commands
+	140924	ksl	Updated to allow for varioua model types
 	'''
 
 	log('# Start run_persist  %s\n' % date.get_gmt())
@@ -254,6 +263,7 @@ def steer(argv):
 	i=1
 	dataset_list='none'
 
+	model_type=1
 	norm=0.3
 	alpha=0.174
 	gamma=1.0
@@ -275,6 +285,9 @@ def steer(argv):
 		if argv[i]=='-h':
 			print __doc__
 			return    
+		elif argv[i]=='-model':
+			i=i+1
+			model_type=int(argv[i])
 		elif argv[i]=='-n':
 			i=i+1
 			norm=eval(argv[i])
@@ -415,7 +428,7 @@ def steer(argv):
 	else:
 		n=1
 		for one in datasets:
-			do_dataset(one,norm,alpha,gamma,e_fermi,kT,fileroot,ds9,local,xynorm)
+			do_dataset(one,model_type,norm,alpha,gamma,e_fermi,kT,fileroot,ds9,local,xynorm)
 			print '# Completed dataset %d of %d. Elapsed time is %0.1f s' % (n,ntot,time.clock()-xstart)
 			n=n+1
 
