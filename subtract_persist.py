@@ -722,11 +722,11 @@ def do_dataset(dataset='ia21h2e9q',model_type=0,norm=0.3,alpha=0.2,gamma=0.8,e_f
 	cur_time=date.get_gmt()
 
 	if model_type==0:
-		print '# Processing dataset %s Norm %4.2f alpha %4.2f gamma %4.2f e_fermi %6.0f kT %6.0f ' % (dataset,norm,alpha,gamma,e_fermi,kT)
+		print '# Processing dataset %s with fermi model: Norm %4.2f alpha %4.2f gamma %4.2f e_fermi %6.0f kT %6.0f ' % (dataset,norm,alpha,gamma,e_fermi,kT)
 	elif model_type==1:
-		print '# Processing dataset %s with a gamma model' % dataset
+		print '# Processing dataset %s with A gamma model' % dataset
 	elif model_type==2:
-		print '# Processing dataset %s with a tiem-variable fermi model' % dataset
+		print '# Processing dataset %s with a time-variable fermi model' % dataset
 	else:
 		print '# Error: run_persist: Unknown model type %d' % model_type
 		return 'NOK'
@@ -782,9 +782,11 @@ def do_dataset(dataset='ia21h2e9q',model_type=0,norm=0.3,alpha=0.2,gamma=0.8,e_f
 	history.write('! Object:    %s\n' % sci_obj)
 
 	if model_type==0:
-		history.write('\n! Persistence model: norm %6.2f alpha %6.2f e_fermi %6.0f kT %6.0f\n' % (norm,alpha,e_fermi,kT)) 
+		history.write('\n! Persistence dataset %s with fermi model:  norm %6.2f alpha %6.2f e_fermi %6.0f kT %6.0f\n' % (dataset,norm,alpha,e_fermi,kT)) 
 	elif model_type==1:
-		history.write('\n! Proecessing dataset %s with a gamma model' % dataset)
+		history.write('\n! Processing dataset %s with A gamma model' % dataset)
+	elif model_type==2:
+		history.write('\n! Processing dataset %s with time-variable fermi  model' % dataset)
 
 
 	# Check whether there is anything to do
