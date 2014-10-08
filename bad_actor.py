@@ -50,7 +50,7 @@ import date
 import per_list
 import per_fits
 
-def do_dataset(fileroot='observations',dataset='ia21h2e9q'):
+def do_dataset(fileroot='observations',dataset='ia21h2e9q',exptime=0):
 	'''
 	Determine for a single dataset how much persistence this object is likely 
 	to cause
@@ -62,10 +62,15 @@ def do_dataset(fileroot='observations',dataset='ia21h2e9q'):
 		Fraction of pixels with more than saturation
 		Fraction of pixels with more than half saturation
 
+	Note: This routine might be made faster using masked arrays or numpy.select.
+	At presnt, most of the time is in the loop at the bottom of the routine
+	whrere one counts the pixels above a saturation level.
 	
 	111025	ksl	Covert so results are provided as persentages
 	111031	ksl	Modified so that if the image is not read then the routine
 			returns an list of length 0
+	141007	ksl	Add an option to calculate the amount of persistence
+			for this field given a different exposure time.
 	'''
 	record=per_list.read_ordered_list_one(fileroot,dataset)
 
@@ -73,11 +78,15 @@ def do_dataset(fileroot='observations',dataset='ia21h2e9q'):
 		print 'Could not find dataset %s' % dataset
 		return
 
-	# print 'xxxx',record
+	actual_exposure=eval(record[11])
 	x=per_fits.get_image(record[0],1,'e')  # Convert this to electrons
+
 	if len(x)==0:
 		print 'Skipping dataset %s because it was not read' % record[0]
 		return []
+
+	if exptime>0:
+		x=(exptime/actual_exposure)*x
 
 	q=numpy.ravel(x)
 	mpts=len(q)
@@ -121,7 +130,7 @@ def get_progs(records):
 	return progs
 
 
-def analyze(records,results):
+def analyze(records,results,exptime=0.0):
 	'''
 	Produce plots etc of the results
 
@@ -177,7 +186,10 @@ def analyze(records,results):
 	xindex=numpy.argsort(xsort)
 	xindex=numpy.flipud(xindex)
 
+
 	g=open('bad_actor.txt','w')
+	if exptime>0:
+		g.write('# Results scaled to an exposure time of %.1f\n' % exptime) 
 	g.write('# Program     PI        WorstTarget    Nimages   2xSat     Sat   1/2XSat   Worst2x   WorstSat  Worst1/2Sat\n')
 	for i in xindex:
 		one=aaa[i]
@@ -231,6 +243,9 @@ def steer(argv):
 	This is a steering routine for bad_actor so that options can be exercised from the 
 	command line
 
+	Once the command line is parsed, the routine do_dataset is called one or more times
+	and then analyze is called.
+
 	111019	ksl	Adapted from the same routine in subtract_persist3
 	'''
 	i=1
@@ -240,6 +255,7 @@ def steer(argv):
 	mjd_after=0.0    # A amall number for mjd
 	mjd_before=1.e6  # A large number for mjd
 	prog_id=0
+	exptime=0
 
 
 	while i<len(argv):
@@ -278,6 +294,10 @@ def steer(argv):
 			dataset_list='All'
 			i=i+1
 			prog_id=int(argv[i])
+		elif argv[i]=='-exp':
+			i=i+1
+			exptime=eval(argv[i])
+			print 'OK: evaluating files as if the exposur times were %.1f' % exptime
 		elif argv[i][0]=='-':
 			print 'Error: Unknown switch ---  %s' % argv[i]
 			return
@@ -288,7 +308,7 @@ def steer(argv):
 	print dataset_list
 	if dataset_list=='none': #  Then we are processing a single dataset
 		dataset=words[0]
-		do_dataset(fileroot,dataset)
+		do_dataset(fileroot,dataset,exptime)
 	elif dataset_list=='All': # Then we are handling multiple datasets
 		g=open('Problems.txt','w')
 		f=open('bad_actor_all.txt','w')
@@ -297,7 +317,7 @@ def steer(argv):
 		results=[]
 		records_out=[]
 		for word in records:
-			xxxx=do_dataset(fileroot,word[1])
+			xxxx=do_dataset(fileroot,word[1],exptime)
 			if len(xxxx)>0:
 				records_out.append(word)
 				results.append(xxxx)
@@ -312,7 +332,7 @@ def steer(argv):
 		# print 'OK',len(records),len(records_out),len(results)
 		g.close()
 		f.close()
-		analyze(records_out,results)
+		analyze(records_out,results,exptime)
 
 	else:
 		print "Don't know what to do"
