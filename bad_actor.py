@@ -22,14 +22,23 @@ Basic ussage is as follows:
 	bad_actor.py -all [-start time1]  [-stop time2] - process the datasets
 	        			that are in the .ls when the observations occured after time1 and/or before time2
 		        		time1 and time2 are either MJD or ISO formated times, e.g '2009-11-12 15:13:24'
+	bad_actor.py -exp 100		Rescales so that the persistence is calculated as if the observation
+					ahd a duration of, in this case, 100 s.  This is intended to
+					be useful for the situation where you would like to find
+					a field that is bad, instead of an exposure.  Note that 
+					there is no consideration of what filter was used.
+	bad_actor.py -out  whatever	Rootname for the ouutput files
 
 
 Description:  
 
 	Three files are produced:
 		bad_actor.txt     	Contains the results of analyze, a sorted list of the 
-			programs from most egregious bad actor to least
-		bad_actor_all.txt	Contains results for each file that was analyzed
+			programs from most egregious bad actor to least (if -out is specified
+			the rootname will be whatever was specified)
+		bad_actor_all.txt	Contains results for each file that was analyzed  
+			(if -out is specified the rootname will be whatever was specified)
+
 		Problems.txt		Identifies files which may have been moved since
 			the observations.ls file was created by per_list.py
 
@@ -39,7 +48,9 @@ Notes:
 									   
 History:
 
-111019 ksl Coding begun
+111019	ksl Coding begun
+141007	ksl Added switch to renormalize to a different expsoure time.
+141008	ksl Addes switch to provide for a different rootname for the outpputs
 
 '''
 
@@ -130,7 +141,7 @@ def get_progs(records):
 	return progs
 
 
-def analyze(records,results,exptime=0.0):
+def analyze(records,results,exptime=0.0,out_root='bad_actor'):
 	'''
 	Produce plots etc of the results
 
@@ -187,7 +198,7 @@ def analyze(records,results,exptime=0.0):
 	xindex=numpy.flipud(xindex)
 
 
-	g=open('bad_actor.txt','w')
+	g=open(out_root+'.txt','w')
 	if exptime>0:
 		g.write('# Results scaled to an exposure time of %.1f\n' % exptime) 
 	g.write('# Program     PI        WorstTarget    Nimages   2xSat     Sat   1/2XSat   Worst2x   WorstSat  Worst1/2Sat\n')
@@ -231,7 +242,7 @@ def analyze(records,results,exptime=0.0):
 	pylab.ylabel('% Pixels')
 	pylab.xlabel('% images')
 	pylab.axis([0,20,0.,3.0])
-	pylab.savefig('bad_actor.png')
+	pylab.savefig(out_root+'.png')
 	pylab.draw()
 	return
 	
@@ -256,6 +267,7 @@ def steer(argv):
 	mjd_before=1.e6  # A large number for mjd
 	prog_id=0
 	exptime=0
+	out_root='bad_actor'
 
 
 	while i<len(argv):
@@ -297,7 +309,11 @@ def steer(argv):
 		elif argv[i]=='-exp':
 			i=i+1
 			exptime=eval(argv[i])
-			print 'OK: evaluating files as if the exposur times were %.1f' % exptime
+			print 'OK: evaluating files as if the exposure times were %.1f' % exptime
+		elif argv[i]=='-out':
+			i=i+1
+			out_root=argv[i]
+			print 'OK: The root name for all output files will be %s' % out_root
 		elif argv[i][0]=='-':
 			print 'Error: Unknown switch ---  %s' % argv[i]
 			return
@@ -311,7 +327,7 @@ def steer(argv):
 		do_dataset(fileroot,dataset,exptime)
 	elif dataset_list=='All': # Then we are handling multiple datasets
 		g=open('Problems.txt','w')
-		f=open('bad_actor_all.txt','w')
+		f=open(out_root+'_all.txt','w')
 		records=per_list.read_ordered_list_progid(fileroot,prog_id,mjd_after,mjd_before)
 		print 'There are %d images to process' % len(records)
 		results=[]
@@ -332,7 +348,7 @@ def steer(argv):
 		# print 'OK',len(records),len(records_out),len(results)
 		g.close()
 		f.close()
-		analyze(records_out,results,exptime)
+		analyze(records_out,results,exptime,out_root)
 
 	else:
 		print "Don't know what to do"
