@@ -23,11 +23,14 @@ Basic ussage is as follows:
 	        			that are in the .ls when the observations occured after time1 and/or before time2
 		        		time1 and time2 are either MJD or ISO formated times, e.g '2009-11-12 15:13:24'
 	bad_actor.py -exp 100		Rescales so that the persistence is calculated as if the observation
-					ahd a duration of, in this case, 100 s.  This is intended to
+					had a duration of, in this case, 100 s.  This is intended to
 					be useful for the situation where you would like to find
 					a field that is bad, instead of an exposure.  Note that 
 					there is no consideration of what filter was used.
 	bad_actor.py -out  whatever	Rootname for the ouutput files
+	bad_actor.py -obslist fileroot  Rootname (normally observations) of the file read to find
+					the datasets.  This is useful if you want to construct a 
+					specific set of exposures to evaluate)
 
 
 Description:  
@@ -42,6 +45,8 @@ Description:
 		Problems.txt		Identifies files which may have been moved since
 			the observations.ls file was created by per_list.py
 
+	Aside from some information about each dataset, the main thing that is calculated is the fraction
+	of pixels exceeeding 2, 1 and 0.5 x saturation.
 Primary routines:
 
 Notes:
@@ -276,7 +281,8 @@ def steer(argv):
 			return    
 		elif argv[i]=='-obslist':
 			i=i+1
-			fileroot=eval(argv[i])
+			fileroot=(argv[i])
+			print 'OK, you want to use the file %s.ls in place of observations.ls' % fileroot
 		elif argv[i]=='-many':
 			i=i+1
 			dataset_list=argv[i]
