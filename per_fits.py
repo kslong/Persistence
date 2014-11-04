@@ -485,6 +485,8 @@ def get_image_ext(filename,exten=1,rescale='no'):
 		units='counts'
 	elif xxxx[2].lower()=='counts/s':
 		units='counts/s'
+	elif xxxx[2].lower()=='electrons':
+		units='e'
 	else:
 		print 'This file yielded ',xxxx,' which suggests all options are not accounted for, assuming electrons'
 		units='e'

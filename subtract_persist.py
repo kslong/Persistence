@@ -244,7 +244,7 @@ def read_models(filename='per_fermi/fermi.fits'):
 	
 
 
-	print 'read_models:',model_stim.shape,model_a.shape,model_g.shape
+	# print 'read_models:',model_stim.shape,model_a.shape,model_g.shape
 
 	model_file=filename
 
@@ -317,7 +317,7 @@ def read_models_orig(filename='per_model/models.ls'):
 
 
 	model_file=filename
-	print 'read_models: Finished reading ',filename
+	# print 'read_models: Finished reading ',filename
 
 	print 'test',model_exp
 
@@ -682,8 +682,9 @@ def do_dataset(dataset='ia21h2e9q',model_type=0,norm=0.3,alpha=0.2,gamma=0.8,e_f
 	persistance model from each of the previous images.  It assumes that the only one which
 	matters is the image which created the most persistence according toe the modeld
 
-	model_type=0 is our ourignal model which has a modified fermi distributioon, controlled by the values of norm, etc.
+	model_type=0 is our our orignal model which has a modified fermi distributioon, controlled by the values of norm, etc.
 	model_type=1 is our purely describtive model defined in terms of amplitudes and power laws
+	model_type=2 for the fermi model that interpolates bewtween cureves for different expsoure times
 
 	All returns from this program should be:
 		OK:  something
@@ -703,6 +704,9 @@ def do_dataset(dataset='ia21h2e9q',model_type=0,norm=0.3,alpha=0.2,gamma=0.8,e_f
 	Notes:
 		This is really the main routine of the program.  When run_persist.py calls this modeule. 
 		this is the routine that is called.
+
+		In practice, the only difference between model types 1 and 2 is the calibration file that is read in.  The same interpolation
+		routine is used for both.  At present the calibration file names for this are hardwired.
 
 	History
 
