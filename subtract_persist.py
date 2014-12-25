@@ -20,7 +20,9 @@ and txt files that describe what has happened
 
 The outputs are in a subdirectory of the directory containing the flt files
 or alternatively if the local swithc is set in a subdirectory of the
-current working direcory
+current working directory
+
+
 
 
 Description:  
@@ -74,11 +76,23 @@ Calibration files:
 	from which subtract_persist is being run, a subdirectory that has to be names PerCal
 	or in a directory defined by an environment variable PERCAL.  
 
-	At present the calibration files that are needed are 
+	The names of the calibration files are read from a parameter file, conventionally
+	named persist.pf which contains a keyword and a file name on each line for
+	each of the files that are needed.
 
-	persist_corr.fits 
-	a_gamma.fits
-	fermi.fits
+	At present this file looks something like this:
+
+	xynorm persist_xcorr.fits
+	a_gamma a_gamma.fits
+	fermi  fermi.fits
+
+	where 
+		xynom is the spatially dependent correction for persistsnce
+		a_gamma are the parameters needed for the a_gamma model, which consists
+			of the persistence fitted to a power law for differnt fluence
+			levels
+		fermi is the exposure-time dependent feemi
+
 
 Outputs:
 
