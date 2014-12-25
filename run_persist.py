@@ -74,8 +74,8 @@ Note that all of the numbers should be positive numbers!
 -kT	-- The width of the fermi function
 -alpha	-- The power law to model very oversatruated events.
 -gamma	-- The power law decay with time
--xy foo.fits -- Replace the default calibration file containing the spatial variation in
-	persistence with foo.fits
+-pf foo.pf  -- Replace the default parameter file contianing links to all of the files read
+		by do persist to foo.pf
 	
 Outputs:
 
@@ -107,6 +107,9 @@ History:
 140923	ksl	Changed version number to 3.0 to reflect the fact that this will
 		be a major change in the software to allow for different types of
 		models
+141225	ksl	Minor changes in parameters the program accepts to reflect the
+		use of a parameter file to contain names of files needed by the
+		persistence model
 
 '''
 
@@ -153,7 +156,7 @@ def log(string,filename='history.log',option='a'):
 	return
 
 
-def do_dataset(dataset='ia21h2e9q',model_type=1,norm=0.3,alpha=0.2,gamma=0.8,e_fermi=80000,kT=20000,fileroot='observations',ds9='yes',local='no',xynorm='persist_corr.fits'):
+def do_dataset(dataset='ia21h2e9q',model_type=1,norm=0.3,alpha=0.2,gamma=0.8,e_fermi=80000,kT=20000,fileroot='observations',ds9='yes',local='no',pffile='persist.pf'):
 	'''
 
 	Run the persistence 'pipeline' for a single dataset.
@@ -165,8 +168,8 @@ def do_dataset(dataset='ia21h2e9q',model_type=1,norm=0.3,alpha=0.2,gamma=0.8,e_f
 		local=='yes'  imples that the output files are created directly below
 			the place the program is being run, insteand of in the
 			Visit directories
-		xynom is the correction file which accounts for variations in
-			persistemce
+		pffile is the parameter file which contains the names of files needed
+			to create models of persistence
 		
 
 
@@ -197,7 +200,7 @@ def do_dataset(dataset='ia21h2e9q',model_type=1,norm=0.3,alpha=0.2,gamma=0.8,e_f
 		return 'Error: Dataset not found at %s' % cur_time
 
 	# Carry out peristence subtraction for this dataset
-	string=subtract_persist.do_dataset(dataset,model_type,norm,alpha,gamma,e_fermi,kT,fileroot,ds9,local,xynorm)
+	string=subtract_persist.do_dataset(dataset,model_type,norm,alpha,gamma,e_fermi,kT,fileroot,ds9,local,pffile)
 
 	log('%s\n' % string)
 	if string[0:3]=='NOK':
@@ -277,7 +280,7 @@ def steer(argv):
 	clean='no'
 	ds9='no'
 	local='no'
-	xynorm='persist_corr.fits'
+	pffile='persist.pf'
 
 	switch='single'
 
@@ -348,11 +351,9 @@ def steer(argv):
 			ds9='yes'
 		elif argv[i]=='-local':
 			local='yes'
-		elif argv[i]=='-xy':
+		elif argv[i]=='-pf':
 			i=i+1
-			xynorm=argv[i]
-			if xynorm=='none':
-				xynorm=''
+			pffile=argv[i]
 		elif argv[i][0]=='-':
 			print 'Error: Unknown switch ---  %s' % argv[i]
 			return
@@ -428,7 +429,7 @@ def steer(argv):
 	else:
 		n=1
 		for one in datasets:
-			do_dataset(one,model_type,norm,alpha,gamma,e_fermi,kT,fileroot,ds9,local,xynorm)
+			do_dataset(one,model_type,norm,alpha,gamma,e_fermi,kT,fileroot,ds9,local,pffile)
 			print '# Completed dataset %d of %d. Elapsed time is %0.1f s' % (n,ntot,time.clock()-xstart)
 			n=n+1
 

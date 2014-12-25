@@ -15,10 +15,12 @@ This version supports two types of models:
 The routine requets a file created by per_list.py that contains
 a time-order list of flt files
 
-The outputs include one or more  persistence images, subtracted flt files
+The outputs include one or more persistence images, subtracted flt files
 and txt files that describe what has happened
 
 The outputs are in a subdirectory of the directory containing the flt files
+or alternatively if the local swithc is set in a subdirectory of the
+current working direcory
 
 
 Description:  
@@ -33,24 +35,29 @@ In general, per_list.py should have been run previously
 Basic usage is as follows
 
 subtact_persist.py dateset   - process a single dataset
+
 subtract_persist.py -all      - process all of the datasets in the .ls file
+
 subtract_persist.py -all [-after time1]  [-before time2] - process the datasets
 	that are in the .ls when the observations occured after time1 and/or before time2
 	time1 and time2 are either MJD or ISO formated times, e.g '2009-11-12 15:13:24'
-subtract_persist.py -many file.ls - proces a list of dataset names (one dataset per line)
+
+subtract_persist.py -many file.ls - process a list of dataset names (one dataset per line)
 
 subtract_persist.py -obslist obsers2.ls  - specifices something other than the normal
 	observation.ls file to use.
+
 subtract_persist.py -ds9  - causes ds9 to start up and various files to be displayed in
 	ds9 during processing
+
 subtract_persisty.py -local - causes the output files to be written in a subdirectory
-	of the current working directory instead of with the original flt files as
-	is normal
+	of the current working directory instead of the directory containing the
+	the original flt files.
 
 Other switches allow you to control the persistence function that is subtracted, e. g.
 
--model  -- 0 for the original fermi-function based formalisim
-	   1 for the newer purely observational formula
+-model  -- 0 for the original fermi-function based formalism
+	   1 for the newer purely observational formula  (This is the defualt)
 	   2 for a fermi function with modified for different stimulus exposure times
 -gamma	-- The power law time decay
 -n	-- The normalization at 1000 s
@@ -348,7 +355,7 @@ def read_parameter(parameter_file,parameter):
 	value=''
 	for line in lines:
 		line=line.split()
-		print parameter, line
+		# print parameter, line
 		if len(line)>1 and line[0]==parameter:
 			value=line[1]
 			break
