@@ -59,11 +59,7 @@ Other switches allow you to control the persistence function that is subtracted,
 -kT	-- The width of the fermi function
 -alpha	-- The power law exponent which accounts for the continued increase of flux at 
 	   higher flux levels
--xynorm foo.fits -- replaces the default file which corrects for spatial dependence of persistence 
-		with a file foo.fits.  The correction file shold be a file which is on average 1, 
-		with values larger or smaller than this indicating the sensitivity to persistence.
-		this file is multipled with the overall model
--xynorm none -- Do not make a spatially dependent correction.
+-pf        foo.pf  -- replaces the default parameter file persist.pf with a new one
 
 Calibration files:
 
@@ -323,7 +319,7 @@ def read_models_orig(filename='per_model/models.ls'):
 
 	print model_stim.shape,model_a.shape,model_g.shape
 
-def read_one_parameter(parameter_file,parameter):
+def read_parameter(parameter_file,parameter):
 	'''
 	Read a single parameter, such as a calibration file name
 	from a parameter file
@@ -341,8 +337,8 @@ def read_one_parameter(parameter_file,parameter):
 
 	parameter_file=locate_file(parameter_file)
 
-	if parameter_file='':
-		print 'Error: read_one_parameter: Could not read parameter becasue could not locate %s' % parameter_file
+	if parameter_file=='':
+		print 'Error: read_parameter: Could not read parameter becasue could not locate %s' % parameter_file
 		return ''
 
 	f=open(parameter_file)
@@ -352,11 +348,15 @@ def read_one_parameter(parameter_file,parameter):
 	value=''
 	for line in lines:
 		line=line.split()
-		if line[0]==parameter:
+		print parameter, line
+		if len(line)>1 and line[0]==parameter:
 			value=line[1]
 			break
 	if value=='':	
 		print 'Error: Could not locate %s in %s'  % (parameter,parameter_file)
+
+	if value=='None' or value == 'none':
+		value=''
 	
 	return value
 
@@ -714,7 +714,7 @@ def get_stats(image,saturation=70000):
 
 
 
-def do_dataset(dataset='ia21h2e9q',model_type=0,norm=0.3,alpha=0.2,gamma=0.8,e_fermi=80000,kT=20000,fileroot='observations',ds9='yes',local='no',xynorm='persist_corr.fits'):
+def do_dataset(dataset='ia21h2e9q',model_type=0,norm=0.3,alpha=0.2,gamma=0.8,e_fermi=80000,kT=20000,fileroot='observations',ds9='yes',local='no',parameter_file='persist.pf'):
 	'''
 	Create a persistence image for this dataset.  This version works by creating using the 
 	persistance model from each of the previous images.  It assumes that the only one which
@@ -762,6 +762,13 @@ def do_dataset(dataset='ia21h2e9q',model_type=0,norm=0.3,alpha=0.2,gamma=0.8,e_f
 	'''
 
 	cur_time=date.get_gmt()
+
+	xfile=locate_file(parameter_file)
+	if xfile=='':
+		print '# Error: Could not locate parameter file %s ' % parameter_file
+	else:
+		parameter_file=xfile
+
 
 	if model_type==0:
 		print '# Processing dataset %s with fermi model: Norm %4.2f alpha %4.2f gamma %4.2f e_fermi %6.0f kT %6.0f ' % (dataset,norm,alpha,gamma,e_fermi,kT)
@@ -872,11 +879,16 @@ def do_dataset(dataset='ia21h2e9q',model_type=0,norm=0.3,alpha=0.2,gamma=0.8,e_f
 	ext_values=[]  # A place to store information about the persistence due to other observers
 	ext_persist=[] # This is a place holder for storing the extenal persistence
 
+	xynorm=read_parameter(parameter_file,'xynorm')
 	if xynorm!='':
 		xynorm=locate_file(xynorm)
 		xcorr=get_image(xynorm,1)
 		if len(xcorr)==0:
 			xynorm=''  # This is an error because we were unable to find the file
+	else:
+		string='Processing without spatially dependent correction'
+		print string
+		history.write('%s\n' % string )
 
 
 
@@ -925,14 +937,12 @@ def do_dataset(dataset='ia21h2e9q',model_type=0,norm=0.3,alpha=0.2,gamma=0.8,e_f
 			model_persistence=calc_persist(x,dq,dt,norm,alpha,gamma,e_fermi,kT)
 		elif model_type==1:
 			# print 'Model type is 1'
-			# model_persistence=make_persistence_image(x,cur_sci_exp,dt,'per_model/models.ls')
-			# model_persistence=make_persistence_image(x,cur_sci_exp,dt,'per_model/a_gamma.fits')
-			model_persistence=make_persistence_image(x,cur_sci_exp,dt,'a_gamma.fits')
+			xfile=read_parameter(parameter_file,'a_gamma')
+			model_persistence=make_persistence_image(x,cur_sci_exp,dt,xfile)
 		elif model_type==2:
 			# print 'Model type is 2'
-			# model_persistence=make_persistence_image(x,cur_sci_exp,dt,'per_fermi/models.ls')
-			# model_persistence=make_persistence_image(x,cur_sci_exp,dt,'per_fermi/fermi.fits')
-			model_persistence=make_persistence_image(x,cur_sci_exp,dt,'fermi.fits')
+			xfile=read_parameter(parameter_file,'fermi')
+			model_persistence=make_persistence_image(x,cur_sci_exp,dt,xfile)
 		else:
 			print 'Error: subtract_persist: Unknown model type %d' % model_type
 			return 'NOK'
@@ -1163,7 +1173,7 @@ def steer(argv):
 	e_fermi=80000
 	kT=20000
 	fileroot='observations'
-	xynorm='persist_corr.fits'
+	parameter_file='persist.pf'
 	words=[]
 	mjd_after=0.0    # A amall number for mjd
 	mjd_before=1.e6  # A large number for mjd
@@ -1221,11 +1231,11 @@ def steer(argv):
 			ds9='yes'
 		elif argv[i]=='-local':
 			local='yes'
-		elif argv[i]=='-xy':
+		elif argv[i]=='-pf':
 			i=i+1
-			xynorm=argv[i]
-			if xynorm=='none':
-				xynorm=''
+			parameter_file=argv[i]
+			if parameter_file=='none':
+				parameter_file=''
 		elif argv[i][0]=='-':
 			print 'Error: subtract_persist.steer: Unknown switch ---  %s' % argv[i]
 			return
@@ -1235,7 +1245,7 @@ def steer(argv):
 	
 	if dataset_list=='none': #  Then we are processing a single file
 		dataset=words[0]
-		do_dataset(dataset,model_type,norm,alpha,gamma,e_fermi,kT,fileroot,ds9,local,xynorm)
+		do_dataset(dataset,model_type,norm,alpha,gamma,e_fermi,kT,fileroot,ds9,local,parameter_file)
 	# Note it is not clear to me what is going on here.  What distiguishes the next
 	# to options, and why isn't per_list being used  111019 -- ksl  !!!
 	elif dataset_list=='!All': # Then we are working from the obslist
@@ -1250,7 +1260,7 @@ def steer(argv):
 				mjd=float(word[6])
 				print mjd,mjd_before,mjd_after
 				if mjd_after  <= mjd and mjd <= mjd_before:
-					do_dataset(word[1],model_type,norm,alpha,gamma,e_fermi,kT,fileroot,ds9,local,xynorm)
+					do_dataset(word[1],model_type,norm,alpha,gamma,e_fermi,kT,fileroot,ds9,local,parameter_file)
 	else:
 		f=open(dataset_list,'r')
 		lines=f.readlines()
@@ -1261,7 +1271,7 @@ def steer(argv):
 			if len(x)>0 and x[0]!='#':
 				mjd=float(x[6])
 				if mjd_after <= mjd and mjd <= mjd_before:
-					do_dataset(x,model_type,norm,alpha,gamma,e_fermi,kT,fileroot,ds9,local,xynorm)
+					do_dataset(x,model_type,norm,alpha,gamma,e_fermi,kT,fileroot,ds9,local,parameter_file)
 	
 	return
 
