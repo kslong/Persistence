@@ -322,6 +322,44 @@ def read_models_orig(filename='per_model/models.ls'):
 	print 'test',model_exp
 
 	print model_stim.shape,model_a.shape,model_g.shape
+
+def read_one_parameter(parameter_file,parameter):
+	'''
+	Read a single parameter, such as a calibration file name
+	from a parameter file
+
+	Notes:
+
+	This simply finds the parameter file, reads it, and
+	returns the parameter as a string
+
+	History:
+
+	141225	ksl	Coded to try to make it easier to switch calibration
+			files (which are currently hardcoded
+	'''
+
+	parameter_file=locate_file(parameter_file)
+
+	if parameter_file='':
+		print 'Error: read_one_parameter: Could not read parameter becasue could not locate %s' % parameter_file
+		return ''
+
+	f=open(parameter_file)
+	lines=f.readlines()
+	f.close()
+
+	value=''
+	for line in lines:
+		line=line.split()
+		if line[0]==parameter:
+			value=line[1]
+			break
+	if value=='':	
+		print 'Error: Could not locate %s in %s'  % (parameter,parameter_file)
+	
+	return value
+
 	
 def locate_file(filename):
 	'''
