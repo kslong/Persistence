@@ -28,6 +28,10 @@ Notes:
 	130909:  As written one needs to be careful about
 		how this is used since you can only have
 		one history file open at the same time. 
+	
+	141126  Python does hamve a package
+		called logging that could be used instead
+		of this
 									   
 History:
 
