@@ -417,14 +417,14 @@ def locate_file(filename):
 	try:
 		xpath=os.environ['PERCAL']
 	except KeyError:
-		print 'Error: subtract_persist.locate_file: Environment variable PERCAL not defined and %s not found either in local directory or PerCal subdiretory' % filename
+		print 'Error: subtract_persist.locate_file: Environment variable PERCAL not defined and %s not in local directory or PerCal subdirectory' % filename
 		return ''
 
 	xfile='%s/%s' % (xpath,filename)
 	if os.path.isfile(xfile):
 		return xfile
 	
-	print 'Error: subtract_persist.locate_file: %s not found in the local directory, the PerCal subdiretory, or in the direcotry %s defined by PERCAL' % (filename,xpath)
+	print 'Error: subtract_persist.locate_file: %s not in the local directory, the PerCal subdirectory, or the directory %s defined by PERCAL' % (filename,xpath)
 	return ''
 
 def get_persistence(exp=300.,dt=1000.,models='per_model/models.ls'):
@@ -780,6 +780,7 @@ def do_dataset(dataset='ia21h2e9q',model_type=0,norm=0.3,alpha=0.2,gamma=0.8,e_f
 	140606	ksl	Added correction which puts the correct units in the stimulus file.
 	140611	ksl	Began to add in new persistnce model, initially just by short-circuiting everything
 	140803	ksl	Switched to fits version of data files
+	141124	ksl	Small change to handle situations were the flat filed correction is not found
 	'''
 
 	cur_time=date.get_gmt()
