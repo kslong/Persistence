@@ -855,9 +855,9 @@ def do_dataset(dataset='ia21h2e9q',model_type=0,norm=0.3,alpha=0.2,gamma=0.8,e_f
 	if model_type==0:
 		history.write('\n! Persistence dataset %s with fermi model:  norm %6.2f alpha %6.2f e_fermi %6.0f kT %6.0f\n' % (dataset,norm,alpha,e_fermi,kT)) 
 	elif model_type==1:
-		history.write('\n! Processing dataset %s with A gamma model' % dataset)
+		history.write('\n! Processing dataset %s with A gamma model\n' % dataset)
 	elif model_type==2:
-		history.write('\n! Processing dataset %s with time-variable fermi  model' % dataset)
+		history.write('\n! Processing dataset %s with time-variable fermi  model\n' % dataset)
 
 
 	# Check whether there is anything to do
@@ -907,8 +907,11 @@ def do_dataset(dataset='ia21h2e9q',model_type=0,norm=0.3,alpha=0.2,gamma=0.8,e_f
 		xcorr=get_image(xynorm,1)
 		if len(xcorr)==0:
 			xynorm=''  # This is an error because we were unable to find the file
+			history.write('! Error: Could not find correction file %s containing spatial dependence. Continuing anyway' % xynorm)
+		else:
+			history.write('! Processing spatial dependence with %s\n' % xynorm)
 	else:
-		string='Processing without spatially dependent correction'
+		string='! Processing without spatially dependent correction'
 		print string
 		history.write('%s\n' % string )
 
