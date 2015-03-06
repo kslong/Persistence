@@ -145,6 +145,10 @@ from date import *
 
 from scipy.interpolate import interp1d
 
+import config
+VERSION=config.version
+
+
 
 # This is the section where the new a gamma model is calculated 
 # These are the global variables which hold the models
@@ -780,7 +784,7 @@ def do_dataset(dataset='ia21h2e9q',model_type=0,norm=0.3,alpha=0.2,gamma=0.8,e_f
 	140606	ksl	Added correction which puts the correct units in the stimulus file.
 	140611	ksl	Began to add in new persistnce model, initially just by short-circuiting everything
 	140803	ksl	Switched to fits version of data files
-	141124	ksl	Small change to handle situations were the flat filed correction is not found
+	141124	ksl	Small change to handle situations were the flat field correction is not found
 	'''
 
 	cur_time=date.get_gmt()
@@ -852,8 +856,10 @@ def do_dataset(dataset='ia21h2e9q',model_type=0,norm=0.3,alpha=0.2,gamma=0.8,e_f
 	history.write('! Exposure:  %6.1f\n' % sci_exp)
 	history.write('! Object:    %s\n' % sci_obj)
 
+	history.write('\n! Using Version %s of the perstence S/W' % VERSION)
+
 	if model_type==0:
-		history.write('\n! Persistence dataset %s with fermi model:  norm %6.2f alpha %6.2f e_fermi %6.0f kT %6.0f\n' % (dataset,norm,alpha,e_fermi,kT)) 
+		history.write('\n! Processing  dataset %s with fermi model:  norm %6.2f alpha %6.2f e_fermi %6.0f kT %6.0f\n' % (dataset,norm,alpha,e_fermi,kT)) 
 	elif model_type==1:
 		history.write('\n! Processing dataset %s with A gamma model' % dataset)
 	elif model_type==2:

@@ -134,7 +134,9 @@ import subtract_html
 
 
 # Change this number when ever significant revisions of the S/W are made
-VERSION='3.0'
+
+import config
+VERSION=config.version
 	
 
 def log(string,filename='history.log',option='a'):
