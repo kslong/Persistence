@@ -77,6 +77,7 @@ History:
 120330	ksl	Modified the help so that it reflects how the routine actually 
 		works
 130909 ksl	Standardized error printouts
+150317	ksl	Remove iraf/pyraf from per_list
 
 '''
 
@@ -90,7 +91,6 @@ import scipy
 import subprocess
 import pyfits
 import pylab
-import pyraf
 import shutil
 import per_fits
 from astropy.io import fits
@@ -441,51 +441,6 @@ def find_latest(filename='foo'):
 
 
 
-def check4scan_old(filename='./Visit43/ic9t43j1q_flt.fits[1]'):
-	'''
-	Determine whether or not a raw, ima, or flt file is associated with an observation involving  
-	a spatial scan.  
-
-	Return:
-		scan	if a spatial scan
-		stare   if the spt file exists, but it is not a spatial san
-		unknown	if the spt file does not exist
-	
-	Notes:
-
-	The routine looks for the spt file corresponding to the dataset and
-	parses the header to find out if it is a scanned observation.
-	
-	130225  Coded and Debugged
-	'''
-
-	xscan=''
-
-
-	xfile=xname[0]
-	xfile=xfile.replace('flt','spt')
-	xfile=xfile.replace('raw','spt')
-	xfile=xfile.replace('ima','spt')
-
-	# Now we should have the name of the spt file
-
-
-	try:
-		x=fits.open(xfile)
-	except IOError:
-		return 'no_spt'
-
-
-
-	if x[0].header['SCAN_TYP'] == 'N':
-		xscan='stare'
-	else: 
-		xscan='scan'
-
-	x.close()
-
-	return xscan  
-	
 
 
 
@@ -519,9 +474,8 @@ def check4scan(filename='./Visit43/ic9t43j1q_flt.fits[1]'):
 	xfile=xfile.replace('ima','spt')
 
 	# Now we should have the name of the spt file
-	if pyraf.iraf.imaccess(xfile):
-		xx=pyraf.iraf.hselect(xfile+'[0]','SCAN_TYP','yes',Stdout=1)
-		xx=xx[0].split('\t')
+	if os.path.exists(xfile)==True:
+		xx=per_fits.get_keyword(xfile,0,'SCAN_TYP')
 	else: 
 		return 'no_spt'
 
@@ -869,27 +823,20 @@ def make_ordered_list(fileroot='observations',apertures='full',filetype='flt',ne
 		line=line.split()
 
 		# 100807 Added date of file creation so could handle non-unique data sets
-		xfile='%s[1]' % line[0]
-		if pyraf.iraf.imaccess(xfile):
-			x=pyraf.iraf.hselect(xfile,'$I,rootname,proposid,linenum, instrume,detector,expstart,date-obs,time-obs,aperture,filter,exptime,crval1,crval2,targname,asn_id,pr_inv_L,date','yes',Stdout=1)
+		# xfile='%s[1]' % line[0]
+		xfile=line[0]
+		if os.path.isfile(xfile) == True:
+			x=per_fits.get_keyword(xfile,1,'rootname,proposid,linenum, instrume,detector,expstart,date-obs,time-obs,aperture,filter,exptime,crval1,crval2,targname,asn_id,pr_inv_L')
+			x=[xfile]+x
 
-
-			x=x[0].split('\t')
-
-			# print 'test0',x
-
-			# Kluge for raw data files which have two ROOTNAME keywords for unknown reasons
-			if x[1]==x[2]:
-				x.pop(2)
-
-			x[16].replace(' ','-')  # Get rid of spaces in PI names
-
-			# Another kludge for raw files.  The is no 'date' field in the first extension as there is for flt and ima files, but DATE does exist in extension 0
+			# for raw files the date is in extension 0, but for the others it is in 1.
 			if filetype=='raw':
-				xname=per_fits.parse_fitsname(xfile,0,'yes')
-				xx=pyraf.iraf.hselect(xname[2],'$I,DATE','yes',Stdout=1)
-				xx=xx[0].split('\t')
-				x.append(xx[1])
+				date=per_fits.get_keyword(xfile,0,'date')
+			else:
+				date=per_fits.get_keyword(xfile,1,'date')
+			x.append(date[0])
+
+
 
 			scan=check4scan(xfile)
 
@@ -964,14 +911,14 @@ def write_ordered_list(fileroot='observations',records=[]):
 		xstring=xstring+'%-5s ' % record[3]  # Lineno
 		xstring=xstring+'%-5s ' % record[4]  # Intrum
 		xstring=xstring+'%-5s ' % record[5]  # detector
-		xstring=xstring+'%-5s ' % record[6]  # expstart
+		xstring=xstring+'%14.7f ' % record[6]  # expstart
 		xstring=xstring+'%-5s ' % record[7]  # date-obs
 		xstring=xstring+'%-5s ' % record[8]  # time-obs
 		xstring=xstring+'%-5s ' % record[9]  # aperture
 		xstring=xstring+'%-5s ' % record[10] # fileter 
-		xstring=xstring+'%7.1f ' % eval(record[11]) # exptime
-		xstring=xstring+'%10.6f ' % eval(record[12]) # crval1 
-		xstring=xstring+'%10.6f ' % eval(record[13]) # crval2  
+		xstring=xstring+'%7.1f ' % record[11] # exptime
+		xstring=xstring+'%10.6f ' % record[12] # crval1 
+		xstring=xstring+'%10.6f ' % record[13] # crval2  
 		xstring=xstring+'%-5s ' % record[14] # targname
 		xstring=xstring+'%-5s ' % record[15] # Assn_id 
 		xstring=xstring+'%-5s ' % record[16] # PI      
