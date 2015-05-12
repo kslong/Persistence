@@ -208,7 +208,7 @@ def do_dataset(dataset='ia21h2eaq',fileroot='observations',local='no'):
 	The next two images give an indication of how well the persistence has been subtracted from the images.
 	Both images have the original data in red and the persistence-subtracted data in blue.  The first image is
 	a plot of flux vs the persisence model, the second is flux as a function of the stimulus. Ideally the blue 
-	curves would all center around 0. The utility of these plots depends on how isolated the presistence peaks
+	curves would all center around 0. The utility of these plots depends on how isolated the persistence peaks
 	are from stars in the image. If these plots are empty, no good regions for evaluation persistence were found.'''
 
 	page=page+html.paragraph(string)

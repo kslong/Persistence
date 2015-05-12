@@ -494,27 +494,26 @@ def get_persistence(exp=300.,dt=1000.,models='per_model/models.ls'):
 
 	return persist
 
-def make_persistence_image(x,exptime=500,dt=300,models='per_model/models.ls'):
+def make_persistence_image(x,exptime=500,dt=300,models='a_gamma.fits'):
 	'''
 	Make the persistence image for the A gamma model, given 
 	
 	an image array x,
 	an exposure time for the stimulus image exptime.
 	a time since the end of the (last) stimulus image
-	a file that contains pointers to the individual persistence amplitude curve
+	a fits table that contains the spatially averaged persistence model.
 
 	Note that this routine calls get_persistenee, which returns a persistence curve
 	for a particular exptime and dt. The persistence curve is on a fixed grid. Here we
 	use scipy.inter1d to produce the persisence image.
+
 	'''
 
-	# print 'make_persistence',exptime,dt,models
+
 
 	persist_curve=get_persistence(exptime,dt,models)
 
-	# print 'OK got to make_persistence_image:',len(model_stim),len(persist_curve)
 
-	# print 'make_persistence: persist_curve:',persist_curve[0:400:10]
 
 	# Now we need to interpolate this curve
 	f=interp1d(model_stim,persist_curve,fill_value=0,bounds_error=False)
@@ -915,7 +914,7 @@ def do_dataset(dataset='ia21h2e9q',model_type=0,norm=0.3,alpha=0.2,gamma=0.8,e_f
 			xynorm=''  # This is an error because we were unable to find the file
 			history.write('! Error: Could not find correction file %s containing spatial dependence. Continuing anyway' % xynorm)
 		else:
-			history.write('! Processing spatial dependence with %s\n' % xynorm)
+			history.write('! Reference file containing spatial dependence:  %s\n' % xynorm)
 	else:
 		string='! Processing without spatially dependent correction'
 		print string
@@ -969,10 +968,15 @@ def do_dataset(dataset='ia21h2e9q',model_type=0,norm=0.3,alpha=0.2,gamma=0.8,e_f
 		elif model_type==1:
 			# print 'Model type is 1'
 			xfile=read_parameter(parameter_file,'a_gamma')
+			# The next lines are awkward, becuate the parameter file name is read multiple times
+			if i==0:
+				history.write('! Reference file containing spatially-averaged peristence model: %s' %  xfile)
 			model_persistence=make_persistence_image(x,cur_sci_exp,dt,xfile)
 		elif model_type==2:
 			# print 'Model type is 2'
 			xfile=read_parameter(parameter_file,'fermi')
+			if i==0:
+				history.write('! Reference file containing Spatially-averaged peristence model: %s' %  xfile)
 			model_persistence=make_persistence_image(x,cur_sci_exp,dt,xfile)
 		else:
 			print 'Error: subtract_persist: Unknown model type %d' % model_type
