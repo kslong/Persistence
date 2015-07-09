@@ -89,7 +89,6 @@ import string
 import math
 import scipy
 import subprocess
-import pyfits
 import pylab
 import shutil
 import per_fits

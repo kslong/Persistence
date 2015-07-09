@@ -199,23 +199,17 @@ def read_file(filename,char=''):
 
 def read_models(filename='per_fermi/fermi.fits'):
 	'''
-	Read in the fits models for A gamma style models
-
+	Read in the fits models for which can be expressed
+	in terms of an amplitude A and a power law decay.
+	
 
 	Notes:
 
-	Fits reading returns numpy.arrays, which unfortunalely
-	do not perform identically to lists in the situation
-	where one wants to append rows to one another.  The
-	equvalent on append for a list, is vstack, but it works
-	differently in the sense that one has to say
+	The interpolated Fermi models are also read in 
+	via this procedure.
 
-	y=numpy.vstack((y,z))
 
-	to produce a new y
-
-	A way to avoid this is to make the outside maxtrix a list and then
-	convert it to an array at the end.
+	History
 
 	140803	ksl	Coded
 	140805	ksl	Replaced older read_models routine
@@ -226,6 +220,11 @@ def read_models(filename='per_fermi/fermi.fits'):
 	global model_a
 	global model_g
 	global model_file
+
+
+	# The assumption made here is that one only reads a single
+	# set of models in a single run
+
 	if filename==model_file and len(model_stim)>0:
 		return 'OK'
 
@@ -255,7 +254,6 @@ def read_models(filename='per_fermi/fermi.fits'):
 
 		one_gamma=tabdata['gamma']
 		model_g.append(one_gamma)
-		# print 'diag', one_stim.shape
 		i=i+1
 	
 	model_stim=numpy.array(model_stim[0]) # Use only the first row for the stimulus
@@ -263,86 +261,10 @@ def read_models(filename='per_fermi/fermi.fits'):
 	model_g=numpy.array(model_g)
 
 	
-
-
-	# print 'read_models:',model_stim.shape,model_a.shape,model_g.shape
-
 	model_file=filename
 
 	return
 
-
-
-	
-
-
-
-
-
-
-def read_models_orig(filename='per_model/models.ls'):
-	'''
-	Read in the ascii model files for the A gamma models
-
-	Notes:
-		Ultimately a better format for the model files hould be writtne at which point
-		this routine will need to be rewritten
-
-	140617	ksl	Coded without ksl.io
-	140804 	ksl	This is replaced by the new read_models, and SHOULD BE REMOVED ONCE
-			I AM SURE THERE IS NO RESIDUAL PROBLEM WITH READING THE FITS FILES.
-	'''
-
-
-	global model_exp
-	global model_stim
-	global model_a
-	global model_g
-	global model_file
-	if filename==model_file and len(model_stim)>0:
-		return 'OK'
-
-	if filename.count('.fits')>0:
-		read_models2(filename)
-		return 
-
-
-	model_exp=[]
-	model_stim=[]
-	model_a=[]
-	model_g=[]
-
-	lines=read_file(filename)
-	if len(lines)==0:
-		return 'NOK'
-
-	i=0
-	for line in lines:
-		model_exp.append(eval(line[1]))
-		xlines=read_file(line[0])
-		a=[]
-		g=[]
-		for xline in xlines:
-			if i==0:
-				model_stim.append(eval(xline[0]))
-			a.append(eval(xline[1]))
-			g.append(eval(xline[2]))
-		model_a.append(a)
-		model_g.append(g)
-		i=i+1
-	model_exp=numpy.array(model_exp)
-	model_stim=numpy.array(model_stim)
-	model_a=numpy.array(model_a)
-	model_g=numpy.array(model_g)
-	# print model_exp.shape,model_stim.shape,model_a.shape,model_g.shape
-
-
-	model_file=filename
-	# print 'read_models: Finished reading ',filename
-
-	print 'test',model_exp
-
-	print model_stim.shape,model_a.shape,model_g.shape
 
 def read_parameter(parameter_file,parameter):
 	'''
@@ -462,13 +384,9 @@ def get_persistence(exp=300.,dt=1000.,models='per_model/models.ls'):
 
 	'''
 
-	# if len(model_stim)==0:
-	# 	print 'Reading models',models
-	# 	read_models(models)
+	# Note that read_models returns immediately if the models have already been loaded
 	read_models(models)
 
-	
-	# print 'get_persistence:',len(model_exp),len(model_stim),len(model_a),len(model_g)
 	
 	# Now we need to interpolate so we have a single model given
 	# an exposure time
@@ -509,11 +427,7 @@ def make_persistence_image(x,exptime=500,dt=300,models='a_gamma.fits'):
 
 	'''
 
-
-
 	persist_curve=get_persistence(exptime,dt,models)
-
-
 
 	# Now we need to interpolate this curve
 	f=interp1d(model_stim,persist_curve,fill_value=0,bounds_error=False)
@@ -563,7 +477,7 @@ def calc_fermi(x,norm=1.0,e_fermi=80000,kt=20000,alpha=0.2):
 
 def calc_decay(dt,norm=0.3,gamma=0.8):
 	'''
-	Calculate the factor describing the decay of persistent
+	Calculate the factor describing the decay of persistence
 	'''
 
 	tzero=1000.
@@ -586,7 +500,6 @@ def fixup(x,dq):
 
 	Though better than no estimate at all, what's here still leaves a lot to be desired.
 	'''
-
 	
 	# The next line returns a tuple of arrays
 	indices=numpy.where(dq==256)
@@ -807,8 +720,7 @@ def do_dataset(dataset='ia21h2e9q',model_type=0,norm=0.3,alpha=0.2,gamma=0.8,e_f
 
 	# Read the observations file to get the data set of interest
 
-	# delta=8  # Hardwired value for consideration of persistence.  Datasets which occurred more than delta hours earlier not considered.
-	# Increased to 16 hours 140617
+
 	delta=16  # Hardwired value for consideration of persistence.  Datasets which occurred more than delta hours earlier not considered.
 
 	records=per_list.read_ordered_list2(fileroot,dataset,interval=[-delta,0],outroot='none')
