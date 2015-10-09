@@ -510,14 +510,28 @@ def update_summary(dataset,status_word='Unknown',results='Whatever you want',fil
 	Aside from the dataset name everything is free format in terms of results
 
 
+	It is not really obvious that appending to a line is the best approach.  If I werre writing this
+	today, I might opt for a fixed format from the beginning, but this is part of a larger question
+	of whether one should use astropy. tables, or some kind of database system - ksl - 151006
+
+
 	101221	ksl	Coded as part of effort to get a way to check what files
 			had been processed with the persistence software
 	110103	ksl	Added a better way to keep enough summary files that one
 			might be able to roll back
 	110117	ksl	Dealt with the situation where there were not old_results
 	110721	ksl	Improved the description of the routine
+	151006	ksl	Fixed Error #553, which arose because the routine assumes one
+			often wants to append to a summary line.  Because we use index
+			to find where in the line we want to start replacing data, one
+			needs to be careful that there is no possibility that one is
+			indexing to the wrong position.
 
 	'''
+	print 'Bug - update_summary',status_word
+	print 'Bug - update_summary',results
+	print 'Bug - update_summary',append
+
 	summary_file=fileroot+'.sum'
 	gmt=time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime())
 
@@ -541,15 +555,20 @@ def update_summary(dataset,status_word='Unknown',results='Whatever you want',fil
 		line=lines[i].split()
 		if line[0]==dataset:
 			# Get the old results
+			print 'Bug: line',line
 			old_results=''
 			if len(line)>6:
-				k=lines[i].index(line[6])
+				k=lines[i].index(line[5])+len(line[5])
 				old_results=lines[i][k:len(lines[i])]
 				old_results=old_results.strip()
+				print 'Bug: A',k, len(line),line[6]
 			if append=='yes' and len(old_results)>0:
 				results='%s %s' % (old_results,results)
 
+			print 'Bug old_results',old_results
+			print 'Bug results',results
 			string='%-10s %5s %20s  %20s %-20s %s' % (line[0],line[1],line[2],gmt,status_word,results)
+			print 'Bug string',string
 			g.write('%s\n' % string)
 			check='ok'
 		else:
