@@ -30,8 +30,10 @@ History:
 150513 ksl	Changed version number to 3.0.1 in order to allow
 		a fix to be installed that would record
 		the version number in the .html file
+151008	ksl	Changed version number to 3.0.2 to reflect bug fix
+		this date.  This is a very minor fix
 
 
 '''
 
-version='3.0.1'
+version='3.0.2'
