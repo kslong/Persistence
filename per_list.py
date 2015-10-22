@@ -854,6 +854,7 @@ def make_ordered_list(fileroot='observations',apertures='full',filetype='flt',ne
 				xx=pyraf.iraf.hselect(xname[2],'$I,DATE','yes',Stdout=1)
 				xx=xx[0].split('\t')
 				x.append(xx[1])
+			x[0]=line[0]
 
 #		# Replaced upcoming lines with iraf/pyraf for performance reasons
 #		xfile=line[0]
