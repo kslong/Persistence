@@ -78,6 +78,7 @@ History:
 		works
 130909 ksl	Standardized error printouts
 150317	ksl	Remove iraf/pyraf from per_list
+151022	ksl	Restored iraf/pyraf for performance reasons
 
 '''
 
@@ -93,6 +94,7 @@ import pylab
 import shutil
 import per_fits
 from astropy.io import fits
+import pyraf
 
 
 # Utilities
@@ -474,7 +476,10 @@ def check4scan(filename='./Visit43/ic9t43j1q_flt.fits[1]'):
 
 	# Now we should have the name of the spt file
 	if os.path.exists(xfile)==True:
-		xx=per_fits.get_keyword(xfile,0,'SCAN_TYP')
+		# Revert to iraf/pyraf for performance reasons
+		# xx=per_fits.get_keyword(xfile,0,'SCAN_TYP')
+		xx=pyraf.iraf.hselect(xfile+'[0]','SCAN_TYP','yes',Stdout=1)
+		xx=xx[0].split('\t')
 	else: 
 		return 'no_spt'
 
@@ -528,9 +533,6 @@ def update_summary(dataset,status_word='Unknown',results='Whatever you want',fil
 			indexing to the wrong position.
 
 	'''
-	print 'Bug - update_summary',status_word
-	print 'Bug - update_summary',results
-	print 'Bug - update_summary',append
 
 	summary_file=fileroot+'.sum'
 	gmt=time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime())
@@ -555,20 +557,15 @@ def update_summary(dataset,status_word='Unknown',results='Whatever you want',fil
 		line=lines[i].split()
 		if line[0]==dataset:
 			# Get the old results
-			print 'Bug: line',line
 			old_results=''
 			if len(line)>6:
 				k=lines[i].index(line[5])+len(line[5])
 				old_results=lines[i][k:len(lines[i])]
 				old_results=old_results.strip()
-				print 'Bug: A',k, len(line),line[6]
 			if append=='yes' and len(old_results)>0:
 				results='%s %s' % (old_results,results)
 
-			print 'Bug old_results',old_results
-			print 'Bug results',results
 			string='%-10s %5s %20s  %20s %-20s %s' % (line[0],line[1],line[2],gmt,status_word,results)
-			print 'Bug string',string
 			g.write('%s\n' % string)
 			check='ok'
 		else:
@@ -841,18 +838,35 @@ def make_ordered_list(fileroot='observations',apertures='full',filetype='flt',ne
 		line=line.split()
 
 		# 100807 Added date of file creation so could handle non-unique data sets
-		# xfile='%s[1]' % line[0]
-		xfile=line[0]
-		if os.path.isfile(xfile) == True:
-			x=per_fits.get_keyword(xfile,1,'rootname,proposid,linenum, instrume,detector,expstart,date-obs,time-obs,aperture,filter,exptime,crval1,crval2,targname,asn_id,pr_inv_L')
-			x=[xfile]+x
+		# This is the old version using pyraf, which has been put back for perfomance reasons
+		xfile='%s[1]' % line[0]
+		if pyraf.iraf.imaccess(xfile):
+			x=pyraf.iraf.hselect(xfile,'$I,rootname,proposid,linenum, instrume,detector,expstart,date-obs,time-obs,aperture,filter,exptime,crval1,crval2,targname,asn_id,pr_inv_L,date','yes',Stdout=1)
+			x=x[0].split('\t')
+			# Kluge for raw data files which have two ROOTNAME keywords for unknown reasons
+			if x[1]==x[2]:
+				x.pop(2)
 
-			# for raw files the date is in extension 0, but for the others it is in 1.
+			x[16].replace(' ','-')  # Get rid of spaces in PI names
+			# Another kludge for raw files.  The is no 'date' field in the first extension as there is for flt and ima files, but DATE does exist in extension 0
 			if filetype=='raw':
-				date=per_fits.get_keyword(xfile,0,'date')
-			else:
-				date=per_fits.get_keyword(xfile,1,'date')
-			x.append(date[0])
+				xname=per_fits.parse_fitsname(xfile,0,'yes')
+				xx=pyraf.iraf.hselect(xname[2],'$I,DATE','yes',Stdout=1)
+				xx=xx[0].split('\t')
+				x.append(xx[1])
+
+#		# Replaced upcoming lines with iraf/pyraf for performance reasons
+#		xfile=line[0]
+#		if os.path.isfile(xfile) == True:
+#			x=per_fits.get_keyword(xfile,1,'rootname,proposid,linenum, instrume,detector,expstart,date-obs,time-obs,aperture,filter,exptime,crval1,crval2,targname,asn_id,pr_inv_L')
+#			x=[xfile]+x
+
+#			# for raw files the date is in extension 0, but for the others it is in 1.
+#			if filetype=='raw':
+#				date=per_fits.get_keyword(xfile,0,'date')
+#			else:
+#				date=per_fits.get_keyword(xfile,1,'date')
+#			x.append(date[0])
 
 
 
@@ -929,14 +943,22 @@ def write_ordered_list(fileroot='observations',records=[]):
 		xstring=xstring+'%-5s ' % record[3]  # Lineno
 		xstring=xstring+'%-5s ' % record[4]  # Intrum
 		xstring=xstring+'%-5s ' % record[5]  # detector
-		xstring=xstring+'%14.7f ' % record[6]  # expstart
+		# Next line needed for pyraf
+		xstring=xstring+'%14.7f ' % (eval(record[6]))  # expstart
+		# Next line removed to switch from astropy to pyraf
+		# xstring=xstring+'%14.7f ' % record[6]  # expstart
 		xstring=xstring+'%-5s ' % record[7]  # date-obs
 		xstring=xstring+'%-5s ' % record[8]  # time-obs
 		xstring=xstring+'%-5s ' % record[9]  # aperture
-		xstring=xstring+'%-5s ' % record[10] # fileter 
-		xstring=xstring+'%7.1f ' % record[11] # exptime
-		xstring=xstring+'%10.6f ' % record[12] # crval1 
-		xstring=xstring+'%10.6f ' % record[13] # crval2  
+		xstring=xstring+'%-5s ' % record[10] # filter 
+		# Next line needed for pyraf
+		xstring=xstring+'%7.1f ' % (eval(record[11])) # exptime
+		xstring=xstring+'%10.6f ' % (eval( record[12])) # crval1 
+		xstring=xstring+'%10.6f ' % (eval(record[13])) # crval2  
+		# Next lines removed in swich back to pyraf
+		# xstring=xstring+'%7.1f ' % record[11] # exptime
+		# xstring=xstring+'%10.6f ' % record[12] # crval1 
+		# xstring=xstring+'%10.6f ' % record[13] # crval2  
 		xstring=xstring+'%-5s ' % record[14] # targname
 		xstring=xstring+'%-5s ' % record[15] # Assn_id 
 		xstring=xstring+'%-5s ' % record[16] # PI      
