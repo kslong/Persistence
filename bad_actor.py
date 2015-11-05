@@ -114,7 +114,7 @@ def do_dataset(fileroot='observations',dataset='ia21h2e9q',exptime=0):
 
 	i=len(qq)-1
 
-	levels=[2*sat,sat,0.5*sat]  # These need to be in reverse order
+	levels=[10*sat,5*sat, 2*sat,sat,0.5*sat]  # These need to be in reverse order
 	j=0
 	while j<len(levels):
 		saturation=levels[j]
@@ -345,7 +345,7 @@ def steer(argv):
 				results.append(xxxx)
 				string='%10s %10s %10s %10s %10s %20s %20s' % (word[1],word[2],word[3],word[10],word[11],word[14],word[16])
 				scale=100.
-				string2=' %8.1f %8.3f %8.3f %8.3f ' % (xxxx[1],xxxx[2]*scale,xxxx[3]*scale,xxxx[4]*scale)
+				string2=' %8.1f %8.3f %8.3f %8.3f %8.3f %8.3f ' % (xxxx[1],xxxx[2]*scale,xxxx[3]*scale,xxxx[4]*scale,xxxx[5]*scale,xxxx[6]*scale)
 
 				f.write('%s\n' % (string+string2))
 			else:
