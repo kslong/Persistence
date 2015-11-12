@@ -276,7 +276,7 @@ def write_table(records,results,filename='bad_actor_table.txt'):
 
 	# There are more columns than we want to print out
 
-	x=Table([records[1],records[2],records[3],records[10],records[11],records[14],records[16]],names=['dataset','PropID','LineID','Filter','Exptime','Target','PI'])
+	x=Table([records[1],records[2],records[3],records[10],records[11],records[14],records[16]],names=['dataset','ProgID','LineID','Filter','Exptime','Target','PI'])
 	x['MedianFlux']=results[1]
 	x['x_10']=results[2]
 	x['x_5']=results[3]
