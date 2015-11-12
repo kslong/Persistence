@@ -13,7 +13,7 @@ It uses the observations.ls file as the file list to
 explore
 
 
-Basic ussage is as follows:
+Basic usage is as follows:
 
 	bad_actor.py dataset           = Carry out a bad actor evaluation of this data set
 	bad_actor.py -prog_id  program - Carry out a bad actor evaluation for this program
@@ -36,12 +36,13 @@ Basic ussage is as follows:
 Description:  
 
 	Three files are produced:
-		bad_actor.txt     	Contains the results of analyze, a sorted list of the 
-			programs from most egregious bad actor to least (if -out is specified
-			the rootname will be whatever was specified)
-		bad_actor_all.txt	Contains results for each file that was analyzed  
-			(if -out is specified the rootname will be whatever was specified)
-
+		bad_actor.txt     	Contains the results of routine analyze, basically a sorted list 
+					of the programs from most egregious bad actor to least 
+					(if -out is specified the rootname will be whatever was specified)
+		bad_actor_all.txt	Contains results for each file that was analyzed created on the fly 
+					(if -out is specified the rootname will be whatever was specified)
+		bad_actor_table.txt	Identical to bad_actor_all.txt, except this is an astropy table.  
+					and is created at the end of tghe program
 		Problems.txt		Identifies files which may have been moved since
 			the observations.ls file was created by per_list.py
 
@@ -55,7 +56,10 @@ History:
 
 111019	ksl Coding begun
 141007	ksl Added switch to renormalize to a different expsoure time.
-141008	ksl Addes switch to provide for a different rootname for the outpputs
+141008	ksl Addes switch to provide for a different rootname for the outputs
+151112	ksl Added generation of an astropy table at the end of the program, in order to facililitate 
+	    further analysis with routines such as those that compare the predicted persistence to the
+	    actual presistence
 
 '''
 
@@ -65,6 +69,8 @@ import pylab
 import date
 import per_list
 import per_fits
+from astropy.table import Table
+from astropy.io import ascii
 
 def do_dataset(fileroot='observations',dataset='ia21h2e9q',exptime=0):
 	'''
@@ -252,6 +258,39 @@ def analyze(records,results,exptime=0.0,out_root='bad_actor'):
 	return
 	
 
+def write_table(records,results,filename='bad_actor_table.txt'):
+	'''
+	Write the results as an astropy table
+
+	151112	ksl	Added to facillitate comparison with the persistence prediction tool,
+			but it is unclear that the straight ascii file is needed any longer.
+	'''
+
+
+	records=numpy.array(records)
+	records=numpy.transpose(records)
+
+	results=numpy.array(results)
+	results=numpy.transpose(results)
+	# print 'test',records.shape,results.shape
+
+	# There are more columns than we want to print out
+
+	x=Table([records[1],records[2],records[3],records[10],records[11],records[14],records[16]],names=['dataset','PropID','LineID','Filter','Exptime','Target','PI'])
+	x['MedianFlux']=results[1]
+	x['x_10']=results[2]
+	x['x_5']=results[3]
+	x['x_2']=results[4]
+	x['x_1']=results[5]
+	x['x_0.5']=results[6]
+
+	x['MedianFlux'].format='10.2f'
+	x['x_10'].format='9.5f'
+	x['x_5'].format='9.5f'
+	x['x_2'].format='9.5f'
+	x['x_1'].format='9.5f'
+	x['x_0.5'].format='9.5f'
+	x.write(filename,format='ascii.fixed_width_two_line')
 
 
 def steer(argv):
@@ -355,9 +394,10 @@ def steer(argv):
 		g.close()
 		f.close()
 		analyze(records_out,results,exptime,out_root)
+		write_table(records_out,results,out_root+'_table.txt')
 
 	else:
-		print "Don't know what to do"
+		print "Don't know how to interpret command line.  Try python -h to get brief help text"
 	
 	return
 
