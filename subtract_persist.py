@@ -52,9 +52,12 @@ subtract_persist.py -obslist obsers2.ls  - specifices something other than the n
 subtract_persist.py -ds9  - causes ds9 to start up and various files to be displayed in
 	ds9 during processing
 
-subtract_persisty.py -local - causes the output files to be written in a subdirectory
+subtract_persist.py -local - causes the output files to be written in a subdirectory
 	of the current working directory instead of the directory containing the
 	the original flt files.
+
+subtract_persist.py -lookback 24 - Changes the time in hours to look back in earlier datsets 
+	and calculated the persistence
 
 Other switches allow you to control the persistence function that is subtracted, e. g.
 
@@ -651,7 +654,7 @@ def get_stats(image,saturation=70000):
 
 
 
-def do_dataset(dataset='ia21h2e9q',model_type=0,norm=0.3,alpha=0.2,gamma=0.8,e_fermi=80000,kT=20000,fileroot='observations',ds9='yes',local='no',parameter_file='persist.pf'):
+def do_dataset(dataset='ia21h2e9q',model_type=0,norm=0.3,alpha=0.2,gamma=0.8,e_fermi=80000,kT=20000,fileroot='observations',ds9='yes',local='no',parameter_file='persist.pf',lookback_time=16):
 	'''
 	Create a persistence image for this dataset.  This version works by creating using the 
 	persistance model from each of the previous images.  It assumes that the only one which
@@ -721,7 +724,8 @@ def do_dataset(dataset='ia21h2e9q',model_type=0,norm=0.3,alpha=0.2,gamma=0.8,e_f
 	# Read the observations file to get the data set of interest
 
 
-	delta=16  # Hardwired value for consideration of persistence.  Datasets which occurred more than delta hours earlier not considered.
+	delta=lookback_time  # Datasets which occurred more than delta hours earlier not considered.
+
 
 	records=per_list.read_ordered_list2(fileroot,dataset,interval=[-delta,0],outroot='none')
 
@@ -768,6 +772,7 @@ def do_dataset(dataset='ia21h2e9q',model_type=0,norm=0.3,alpha=0.2,gamma=0.8,e_f
 	history.write('! Object:    %s\n' % sci_obj)
 
 	history.write('\n! Using Version %s of the perstence S/W' % VERSION)
+	history.write('\n! Using a lookback time for observations that might cause persistence of %.1f hours\n' %  lookback_time)
 
 	if model_type==0:
 		history.write('\n! Processing  dataset %s with fermi model:  norm %6.2f alpha %6.2f e_fermi %6.0f kT %6.0f\n' % (dataset,norm,alpha,e_fermi,kT)) 
@@ -1121,6 +1126,8 @@ def steer(argv):
 	kT=20000
 	fileroot='observations'
 	parameter_file='persist.pf'
+	lookback=16
+
 	words=[]
 	mjd_after=0.0    # A amall number for mjd
 	mjd_before=1.e6  # A large number for mjd
@@ -1183,6 +1190,9 @@ def steer(argv):
 			parameter_file=argv[i]
 			if parameter_file=='none':
 				parameter_file=''
+		elif argv[i]=='-lookback':
+			i=i+1
+			lookback=eval(argv[i])
 		elif argv[i][0]=='-':
 			print 'Error: subtract_persist.steer: Unknown switch ---  %s' % argv[i]
 			return
@@ -1192,7 +1202,7 @@ def steer(argv):
 	
 	if dataset_list=='none': #  Then we are processing a single file
 		dataset=words[0]
-		do_dataset(dataset,model_type,norm,alpha,gamma,e_fermi,kT,fileroot,ds9,local,parameter_file)
+		do_dataset(dataset,model_type,norm,alpha,gamma,e_fermi,kT,fileroot,ds9,local,parameter_file,lookback)
 	# Note it is not clear to me what is going on here.  What distiguishes the next
 	# to options, and why isn't per_list being used  111019 -- ksl  !!!
 	elif dataset_list=='!All': # Then we are working from the obslist
@@ -1207,7 +1217,7 @@ def steer(argv):
 				mjd=float(word[6])
 				print mjd,mjd_before,mjd_after
 				if mjd_after  <= mjd and mjd <= mjd_before:
-					do_dataset(word[1],model_type,norm,alpha,gamma,e_fermi,kT,fileroot,ds9,local,parameter_file)
+					do_dataset(word[1],model_type,norm,alpha,gamma,e_fermi,kT,fileroot,ds9,local,parameter_file,lookback)
 	else:
 		f=open(dataset_list,'r')
 		lines=f.readlines()
@@ -1218,7 +1228,7 @@ def steer(argv):
 			if len(x)>0 and x[0]!='#':
 				mjd=float(x[6])
 				if mjd_after <= mjd and mjd <= mjd_before:
-					do_dataset(x,model_type,norm,alpha,gamma,e_fermi,kT,fileroot,ds9,local,parameter_file)
+					do_dataset(x,model_type,norm,alpha,gamma,e_fermi,kT,fileroot,ds9,local,parameter_file,lookback)
 	
 	return
 

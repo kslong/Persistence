@@ -60,6 +60,12 @@ run_persist.py dateset
 	the visit directories, all the output files will be put in a subdirectory
 	Persist of the current working direcgtory
 
+-pf
+	Indicates the name of the parameter file to use for reading the calibration files
+	needed
+
+-lookback Changes the time for looking back to earlier observations in calculating the persistnce.
+
 Other switches allow you to control the persistence function that is subtracted, e. g.
 
 Note that all of the numbers should be positive numbers!
@@ -158,7 +164,7 @@ def log(string,filename='history.log',option='a'):
 	return
 
 
-def do_dataset(dataset='ia21h2e9q',model_type=1,norm=0.3,alpha=0.2,gamma=0.8,e_fermi=80000,kT=20000,fileroot='observations',ds9='yes',local='no',pffile='persist.pf'):
+def do_dataset(dataset='ia21h2e9q',model_type=1,norm=0.3,alpha=0.2,gamma=0.8,e_fermi=80000,kT=20000,fileroot='observations',ds9='yes',local='no',pffile='persist.pf',lookback_time=16):
 	'''
 
 	Run the persistence 'pipeline' for a single dataset.
@@ -202,7 +208,7 @@ def do_dataset(dataset='ia21h2e9q',model_type=1,norm=0.3,alpha=0.2,gamma=0.8,e_f
 		return 'Error: Dataset not found at %s' % cur_time
 
 	# Carry out peristence subtraction for this dataset
-	string=subtract_persist.do_dataset(dataset,model_type,norm,alpha,gamma,e_fermi,kT,fileroot,ds9,local,pffile)
+	string=subtract_persist.do_dataset(dataset,model_type,norm,alpha,gamma,e_fermi,kT,fileroot,ds9,local,pffile,lookback_time)
 
 	log('%s\n' % string)
 	if string[0:3]=='NOK':
@@ -283,6 +289,7 @@ def steer(argv):
 	ds9='no'
 	local='no'
 	pffile='persist.pf'
+	lookback_time=16
 
 	switch='single'
 
@@ -356,6 +363,9 @@ def steer(argv):
 		elif argv[i]=='-pf':
 			i=i+1
 			pffile=argv[i]
+		elif argv[i]=='-lookback':
+			i=i+1
+			lookback_time=eval(argv[i])
 		elif argv[i][0]=='-':
 			print 'Error: Unknown switch ---  %s' % argv[i]
 			return
@@ -431,7 +441,7 @@ def steer(argv):
 	else:
 		n=1
 		for one in datasets:
-			do_dataset(one,model_type,norm,alpha,gamma,e_fermi,kT,fileroot,ds9,local,pffile)
+			do_dataset(one,model_type,norm,alpha,gamma,e_fermi,kT,fileroot,ds9,local,pffile,lookback_time)
 			print '# Completed dataset %d of %d. Elapsed time is %0.1f s' % (n,ntot,time.clock()-xstart)
 			n=n+1
 
