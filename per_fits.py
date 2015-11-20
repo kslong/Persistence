@@ -466,9 +466,8 @@ def get_image_ext(filename,exten=1,rescale='no'):
 	except IOError:
 		print 'Error: per_fits.get_image_ext: %s does not appear to exist' % filename
 		return numpy.array([])
-
-	if data==None:
-		print 'Error: per_fits.get_image.ext: %s exists, but returns None for ext.%d' % (filename,exten)
+	except IndexError:
+		print 'Error: per_fits.get_image.ext: %s exists, but  ext. %d does not appear to exist' % (filename,exten)
 		return numpy.array([])
 
 	if rescale=='no':
