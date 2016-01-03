@@ -66,6 +66,9 @@ run_persist.py dateset
 
 -lookback Changes the time for looking back to earlier observations in calculating the persistnce.
 
+-np number
+	Indicates the a given 'number' of processes will be executed simultanously
+
 Other switches allow you to control the persistence function that is subtracted, e. g.
 
 Note that all of the numbers should be positive numbers!
@@ -125,7 +128,7 @@ import numpy
 import math
 import string
 import time
-
+import multiprocessing
 import date
 
 # Next two lines set the graphics backend to one that is noninteractive
@@ -255,6 +258,17 @@ def do_dataset(dataset='ia21h2e9q',model_type=1,norm=0.3,alpha=0.2,gamma=0.8,e_f
 	log('# Finished dataset %s at %s\n' % (dataset,cur_time))
 	return
 
+def get_no_jobs(jobs):
+	'''
+	Check how many jobs are running
+	'''
+	njobs=0
+	for one in jobs:
+		if one.is_alive():
+			njobs=njobs+1
+	return njobs
+
+
 def steer(argv):
 	'''
 	This is a steering routine for subtract persist so that options can be exercised from the 
@@ -265,6 +279,7 @@ def steer(argv):
 			of persistence subtraction and evaluation of the results into multiple files
 	111114	ksl	Added a command.log to keep track of all of the run_persist commands
 	140924	ksl	Updated to allow for varioua model types
+	160103	ksl	Begin implemenation of multiprocessing
 	'''
 
 	log('# Start run_persist  %s\n' % date.get_gmt())
@@ -292,6 +307,7 @@ def steer(argv):
 	lookback_time=16
 
 	switch='single'
+	np=1
 
 	while i<len(argv):
 		if argv[i]=='-h':
@@ -366,6 +382,9 @@ def steer(argv):
 		elif argv[i]=='-lookback':
 			i=i+1
 			lookback_time=eval(argv[i])
+		elif argv[i]=='-np':
+			i=i+1
+			np=int(argv[i])
 		elif argv[i][0]=='-':
 			print 'Error: Unknown switch ---  %s' % argv[i]
 			return
@@ -438,12 +457,43 @@ def steer(argv):
 				xclean.write('rm -r -f %s\n' % xxx)
 			xclean.close()
 		# return
-	else:
+	elif np==1 or len(datasets)==1:
 		n=1
 		for one in datasets:
 			do_dataset(one,model_type,norm,alpha,gamma,e_fermi,kT,fileroot,ds9,local,pffile,lookback_time)
 			print '# Completed dataset %d of %d. Elapsed time is %0.1f s' % (n,ntot,time.clock()-xstart)
 			n=n+1
+	else:
+		print 'There will be %d processes running simultaneously' % np
+		jobs=[]
+		for one in datasets:
+			p=multiprocessing.Process(target=do_dataset,args=(one,model_type,norm,alpha,gamma,e_fermi,kT,fileroot,ds9,local,pffile,lookback_time,))
+			jobs.append(p)
+		i=0
+		while i<np and i<len(jobs):
+			print '!Starting %s' % datasets[i]
+			one=jobs[i]
+			one.start()
+			i=i+1
+
+		njobs=get_no_jobs(jobs)
+
+		while i<len(jobs):
+			time.sleep(2)
+			njobs=get_no_jobs(jobs)
+			print 'Running %d jobs,including job %d (%s) of %d total' % (njobs,i,datasets[i-1],len(datasets))
+			if njobs<np:
+				print 'Starting: ',datasets[i]
+				one=jobs[i]
+				one.start()
+				i=i+1
+
+		p.join()
+		print 'Completed multiprocessing'
+
+
+
+
 
 
 	

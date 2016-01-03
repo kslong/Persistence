@@ -161,7 +161,6 @@ def get_image_pixel_info(filename,exten=1):
 		offset_x=one_ext.header['LTV1']
 		offset_y=one_ext.header['LTV2']
 		data=one_ext.data
-		# print 'offsets',offset_x,offset_y
 		shape=numpy.shape(data)
 		rows=shape[0]
 		cols=shape[1]
@@ -449,6 +448,8 @@ def get_image_ext(filename,exten=1,rescale='no'):
 	101213	ksl	Added option to include the flush time in the exposure.  
 	121220	ksl	Removed pyraf.iraf dependency
 	140606	ksl	Modified so returns an empty numpy array when it fails, instead of a list
+	160103	ksl	Modified print statements slightly to eliminate print unless there is something
+			that looks like it might be an error message
 	'''
 
 	# Note 'yes' means that even if the filename includes and extension the name that will 
@@ -494,11 +495,11 @@ def get_image_ext(filename,exten=1,rescale='no'):
 	texp=xxxx[0]
 
 	if units=='counts' and rescale != 'none':
-		print 'Converting file %s in counts to electrons' % filename
+		# print 'Converting file %s in counts to electrons' % filename
 		data=data*2.4  # Convert to (by the average gain correction
 		units='e'
 	if units=='counts/s' and rescale != 'none':
-		print 'Converting file %s in counts/s to electrons/s' % filename
+		# print 'Converting file %s in counts/s to electrons/s' % filename
 		data=data*2.4  # Convert to (by the average gain correction
 		units='e/s'
 
@@ -508,7 +509,7 @@ def get_image_ext(filename,exten=1,rescale='no'):
 		data=data/texp
 	elif rescale=='ef' and units=='e/s':
 		if texp<2.9 and rescale=='ef':
-			print 'Assuming the minimum exposure is 2.9 sec'
+			print 'Assuming the minimum exposure is 2.9 sec for %s ' % filename
 			texp=2.9
 		data=data*texp   # Convert to electrons
 	elif rescale=='ef' and units=='e':
@@ -516,7 +517,7 @@ def get_image_ext(filename,exten=1,rescale='no'):
 			data=data*(2.9/texp)
 	elif rescale!='none' and rescale != units:
 		print 'Not quite sure how this image was to be rescaled ',rescale,xxxx
-		print 'Assuming no rescaling was desired'
+		print 'Assuming no rescaling was desired for %s' % filename
 
 	return data
 

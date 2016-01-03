@@ -181,7 +181,7 @@ def find_peaks(image,mask='none',sep=20,maxno=20):
 			xsources.append(one)
 		
 	
-	print 'peaks: Found %d peaks in smoothed persistence image with flux > %f' % (len(xsources),im[i])
+	# print 'peaks: Found %d peaks in smoothed persistence image with flux > %f' % (len(xsources),im[i])
 	return xsources
 
 
@@ -425,7 +425,7 @@ def do_dataset(dataset,fileroot='observations',local='no'):
 		print 'Dataset %s does not have either an external or internal persistence file' % dataset
 
 
-	print 'Finished peaks for dataset %s' % dataset
+	# print 'Finished peaks for dataset %s' % dataset
 	return 'OK: peaks.do_dataset: Finished for dataset %s' %  dataset
 
 

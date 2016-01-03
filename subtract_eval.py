@@ -67,7 +67,6 @@ def read_peaks(file_xy):
 
 	coords=[]
 	for line in lines:
-		# print line
 		line=line.strip()
 		word=line.split()
 		if len(word)>1 and word[0][0]!='#':
@@ -145,7 +144,6 @@ def do_dataset(dataset='ib6v19bzq',radius=50,local='no'):
 	# runs.  Note that this command is dangerous.
 
 	png_files=glob.glob('%s/%s.peak*png' % (fig_path,dataset))
-	# print 'Test',png_files
 	for one in png_files:
 		os.remove(one)
 
@@ -178,9 +176,7 @@ def do_dataset(dataset='ib6v19bzq',radius=50,local='no'):
 
 	stim_hist=numpy.array(stim_hist)
 
-	# print 'stim_hist',stim_hist
 	stim_hist=10**stim_hist
-	# print 'stim_hist',stim_hist
 
 	all_sorig=[] # This is a place to store histograms of the orignal data as a function of stimulus               
 	all_scorr=[] # This is a place to store histograms of the corrected data as a function of stimulus               
@@ -200,7 +196,6 @@ def do_dataset(dataset='ib6v19bzq',radius=50,local='no'):
 		source_no=source_no+1
 		x=one[0]
 		y=one[1]
-		# print 'test x y',x,y
 
 		# Make the stamps that are needed for each file
 		xmin=one[0]-radius
@@ -274,7 +269,6 @@ def do_dataset(dataset='ib6v19bzq',radius=50,local='no'):
 		# Append the results for this particular point to one for all of the points
 		# This is used in the summary slide for the entire field
 
-		# print 'test orig',orig
 
 		all_orig.append(orig)
 		all_corr.append(corr)
@@ -298,7 +292,6 @@ def do_dataset(dataset='ib6v19bzq',radius=50,local='no'):
 		os.chmod(figure_name,0770)
 
 
-		# print 'test Finished the 4 panel figure'
 
 		# Plot the original and subtracted pixels as a function of distance from a center positions
 		# Create an array that contains the distance from the center for each pixel
@@ -349,10 +342,8 @@ def do_dataset(dataset='ib6v19bzq',radius=50,local='no'):
 		if os.path.isfile(figure_name):
 			os.remove(figure_name)
 		pylab.savefig(figure_name)
-		# print 'test savefig ',figure_name
 		os.chmod(figure_name,0770)
 
-		# print 'OK',figure_name
 
 
 		# 110622 - Elimaated to fix a problem on linux
@@ -390,12 +381,10 @@ def do_dataset(dataset='ib6v19bzq',radius=50,local='no'):
 	per_hist=numpy.array(per_hist)
 	per_hist=per_hist+0.5*dper
 
-	# print 'test len(all_corr)',len(all_corr)
 	while i<len(all_corr):
 		corr=numpy.array(all_corr[i])
 		orig=numpy.array(all_orig[i])
 
-		# print 'test orig',orig
 
 		corr=corr-corr[0]
 		orig=orig-orig[0]
@@ -427,7 +416,6 @@ def do_dataset(dataset='ib6v19bzq',radius=50,local='no'):
 		os.remove(figure_name)
 	pylab.savefig(figure_name)
 	os.chmod(figure_name,0770)
-	# print 'OK',figure_name,pylab.axis()
 
 
 	# 110622 - Eliminated to fix a problem on linux
@@ -458,8 +446,6 @@ def do_dataset(dataset='ib6v19bzq',radius=50,local='no'):
 		orig=numpy.array(all_sorig[i])
 		corr=corr-corr[0]
 		orig=orig-orig[0]
-		# print 'orig',orig
-		# print 'corr',corr
 		k=0
 		while k<len(orig):
 			if orig[k]<-900:
@@ -486,7 +472,6 @@ def do_dataset(dataset='ib6v19bzq',radius=50,local='no'):
 		os.remove(figure_name)
 	pylab.savefig(figure_name)
 	os.chmod(figure_name,0770)
-	# print 'OK',figure_name,pylab.axis()
 
 
 	# 110622 - Eliminated to fix a problem on linux
@@ -525,9 +510,6 @@ def get_stats(x,y,xmin,xmax):
 
 	'''
 
-	# print 'test get_stats',x.shape,xmin,xmax
-	# print 'test get_stats x',x
-	# print 'test get_stats y',y
 	z=numpy.ma.masked_outside(x,xmin,xmax)
 	zmask=numpy.ma.getmask(z)
 	yy=numpy.ma.array(y,mask=zmask)

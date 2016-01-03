@@ -546,8 +546,6 @@ def update_summary(dataset,status_word='Unknown',results='Whatever you want',fil
 		print 'Error: update_sumamry: File %s does not exist' % summary_file
 		return
 
-	# g=open('tmp.sum','w')
-	# os.chmod('tmp.sum',0770)
 
 	g=open_file('tmp.sum')
 

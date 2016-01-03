@@ -844,7 +844,7 @@ def do_dataset(dataset='ia21h2e9q',model_type=0,norm=0.3,alpha=0.2,gamma=0.8,e_f
 	i=0
 	while i<len(records)-1:
 		record=records[i]
-		print 'subtract: %30s %6.1f model_type %d' % (record[0],eval(record[11]),model_type)
+		# print 'subtract: %30s %6.1f model_type %d' % (record[0],eval(record[11]),model_type)
 		# dt is measured from the end of the stimulus image to the middle of the
 		# science image
 		[t1,t2]=get_times(record[0])
