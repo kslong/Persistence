@@ -756,11 +756,11 @@ def do_dataset(dataset='ia21h2e9q',model_type=0,norm=0.3,alpha=0.2,gamma=0.8,e_f
 		return path
 
 	# Open a history file.  Note that one needs the path before one can do this
+	# The reason for calling this via the per_list routine, is that this routine sets the permissions
+	# for the file
 
 	history=per_list.open_file(path+science_record[1]+'.txt')
 
-	# history=open(path+science_record[1]+'.txt','w')
-	# os.chmod(path+science_record[1]+'.txt',0770)
 
 	history.write('START:  Persistence processing of file %s\n\n' % science_record[1])
 	history.write('! Processed: %s\n' % date.get_gmt())

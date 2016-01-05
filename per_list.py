@@ -79,6 +79,8 @@ History:
 130909 ksl	Standardized error printouts
 150317	ksl	Remove iraf/pyraf from per_list
 151022	ksl	Restored iraf/pyraf for performance reasons
+160104	ksl	Changes to lock and unlock files so that parallel processing
+		will not corrupt the obervations.sum file
 
 '''
 
@@ -519,6 +521,11 @@ def update_summary(dataset,status_word='Unknown',results='Whatever you want',fil
 	today, I might opt for a fixed format from the beginning, but this is part of a larger question
 	of whether one should use astropy. tables, or some kind of database system - ksl - 151006
 
+	Before 1601 this routine modified the observation.sum file directly, but now it just records the
+	information needed to update the summary file in a directory tmp_sum.  This change was to prevent
+	multiple processing writing to the summary file at the same file.  A new routine fixup_summary_file
+	below now inserts the results into the data.  
+
 
 	101221	ksl	Coded as part of effort to get a way to check what files
 			had been processed with the persistence software
@@ -531,8 +538,14 @@ def update_summary(dataset,status_word='Unknown',results='Whatever you want',fil
 			to find where in the line we want to start replacing data, one
 			needs to be careful that there is no possibility that one is
 			indexing to the wrong position.
+	160105	ksl	Modified for multiprocessing
 
 	'''
+
+
+	if os.path.isdir('tmp_sum')==False:
+		os.mkdir('tmp_sum')
+	
 
 	summary_file=fileroot+'.sum'
 	gmt=time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime())
@@ -543,50 +556,127 @@ def update_summary(dataset,status_word='Unknown',results='Whatever you want',fil
 		lines=f.readlines()
 		f.close()
 	except IOError:
-		print 'Error: update_sumamry: File %s does not exist' % summary_file
+		print 'Error: update_summary: File %s does not exist' % summary_file
 		return
 
 
-	g=open_file('tmp.sum')
-
-	i=0
-	check='nok'
-	while i <len(lines):
-		line=lines[i].split()
-		if line[0]==dataset:
-			# Get the old results
-			old_results=''
-			if len(line)>6:
-				k=lines[i].index(line[5])+len(line[5])
-				old_results=lines[i][k:len(lines[i])]
-				old_results=old_results.strip()
-			if append=='yes' and len(old_results)>0:
-				results='%s %s' % (old_results,results)
-
-			string='%-10s %5s %20s  %20s %-20s %s' % (line[0],line[1],line[2],gmt,status_word,results)
-			g.write('%s\n' % string)
-			check='ok'
-		else:
-			g.write(lines[i])
-		i=i+1
-
-
-
-		# Now move the files around
-	g.close()
-
-	if check=='ok':
-		# Note that these lines need to be almost identical to those in make_sum_file
-		# gmt=time.strftime("%y%m%d.%H%M", time.gmtime())  # Create a string to use to name the updated file. As written a new file a minute
-		# proc=subprocess.Popen('mv %s %s.%s.old' % (summary_file,summary_file,gmt),shell=True,stdout=subprocess.PIPE)
-		backup(summary_file)
-		proc=subprocess.Popen('mv %s %s' % ('tmp.sum',summary_file),shell=True,stdout=subprocess.PIPE)
+	# this opens the files for writing and sets the permissions
+	xfile='tmp_sum/%s.txt' % dataset
+	if os.path.isfile(xfile)==True:
+		gg=open(xfile,'r')
+		old_results=gg.readline()
+		gg.close()
 	else:
-		print 'Error: update_summary: dataset %s is not in %s' % (dataset,summary_file)
+		i=0
+		while i <len(lines):
+			line=lines[i].split()
+			if line[0]==dataset:
+				old_results=lines[i]
+				break
+		i=i+1
+	
+	# OK at this point I have the old results
+
+	results=results.strip()
+
+	old_results=old_results.strip()
+	line=old_results.split()
+
+	if len(line)>6:
+		k=old_results.index(line[5])+len(line[5])
+		old_results=old_results[k:len(old_results)] # This should be the bits that were append previously
+		old_results=old_results.strip()
+
+	if append=='yes' and len(old_results)>0:
+		results='%s %s' % (old_results,results)
+	string='%-10s %5s %20s  %20s %-20s %s' % (line[0],line[1],line[2],gmt,status_word,results)
+
+	gg=open_file('tmp_sum/%s.txt' % dataset)
+	gg.write('%s\n' % string)
+	gg.close()
+
 	return
 
 
 
+def  fixup_summary_file(datasets,fileroot='observations'):
+	'''
+	Update the observations.sum file from the information stored in the 'tmp_sum' directory
+
+	where 
+		datasets is a list of the datasets which have been processed
+		fileroot is the root name of the .sum file to be updated
+	
+	Notes:
+		
+		The directory where the data is stored is hardwired
+
+		The routine simple finds the line in the observations.sum file associated with
+		the dataset and replaces that line with the line that is in the .txt file
+	
+	History:
+
+	160105	ksl	Coded as part of the effort to add multiprocessing
+
+	'''
+
+
+	# Get the data
+	good=[]
+	data=[]
+	for dataset in datasets:
+		try:
+			xname='tmp_sum/%s.txt' % dataset
+			f=open(xname,'r')
+			line=f.readline()
+			data.append(line)
+			good.append(dataset)
+		except IOError:
+			print 'Error: fixup_summary_file: %s does not appear to exist' % xname
+	
+	# OK at this point we have found all of the good files
+
+	summary_file=fileroot+'.sum'
+
+	try:
+		f=open(summary_file,'r')
+		lines=f.readlines()
+		f.close()
+	except IOError:
+		print 'Error: update_summary: File %s does not exist' % summary_file
+		return
+
+
+	i=0
+	while i<len(lines):
+		line=lines[i].split()
+		j=0
+		while j<len(good):
+			if line[0]==good[j]:
+				lines[i]=data[j]
+				print lines[i].strip()
+				break
+			j=j+1
+		i=i+1
+	
+
+	g=open_file('tmp.sum')
+	for one in lines:
+		g.write(one)
+
+
+
+
+	backup(summary_file)
+	proc=subprocess.Popen('mv %s %s' % ('tmp.sum',summary_file),shell=True,stdout=subprocess.PIPE)
+
+	return
+
+
+
+
+
+	
 
 
 
@@ -610,6 +700,7 @@ def make_sum_file(fileroot='observations',new='no'):
 	110119	ksl	Rewrote to assure that there is exactly one summary 
 			file line for each observation file line
 	'''
+
 
 
 	# Read the entire observations.ls file

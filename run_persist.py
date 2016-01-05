@@ -146,6 +146,7 @@ import subtract_html
 
 import config
 VERSION=config.version
+
 	
 
 def log(string,filename='history.log',option='a'):
@@ -155,7 +156,7 @@ def log(string,filename='history.log',option='a'):
 
 	Notes:
 	121220 It might be better to assume that the string
-	had no trailing carraibe return and add it
+	had no trailing carriage return and add it
 	'''
 	history=open(filename,option)
 	os.chmod(filename,0770)
@@ -221,7 +222,7 @@ def do_dataset(dataset='ia21h2e9q',model_type=1,norm=0.3,alpha=0.2,gamma=0.8,e_f
 		log('# Finished dataset %s at %s\n' % (dataset,cur_time))
 		return
 
-	print string
+	# print string
 
 	# Carry out peaks identification for this dataset
 	string=peaks.do_dataset(dataset,fileroot,local=local)
@@ -281,6 +282,7 @@ def steer(argv):
 	140924	ksl	Updated to allow for varioua model types
 	160103	ksl	Begin implemenation of multiprocessing
 	'''
+
 
 	log('# Start run_persist  %s\n' % date.get_gmt())
 	xstart=time.clock()
@@ -494,7 +496,9 @@ def steer(argv):
 
 
 
+	per_list.fixup_summary_file(datasets)
 
+	print 'xxx',xstart,time.clock()
 
 	
 	dtime=time.clock()-xstart
