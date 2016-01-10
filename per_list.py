@@ -573,7 +573,7 @@ def update_summary(dataset,status_word='Unknown',results='Whatever you want',fil
 			if line[0]==dataset:
 				old_results=lines[i]
 				break
-		i=i+1
+			i=i+1
 	
 	# OK at this point I have the old results
 
