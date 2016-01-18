@@ -97,6 +97,7 @@ import shutil
 import per_fits
 from astropy.io import fits
 import pyraf
+from multiprocessing import Pool
 
 
 # Utilities
@@ -861,55 +862,19 @@ def check_sum_file(new='tmp.sum',old='none'):
 
 
 
-# Routines for creating time-ordered lists of data sets and then reading in various time windows.
-
-def make_ordered_list(fileroot='observations',apertures='full',filetype='flt',new='no'):
+def get_info(lines,filetype):
 	'''
-	find all of the observations in all subdiretories and make
-	a time ordered list of the observations from files of a
-	given filetype, e. g. flt.  If apertures == 'full' only
-	put full frames into the list.  Otherwise, include subarrays
+	Get all of the keyword information for a set of files and return this
 
+	Notes:
 
+	This section of the old make_ordered list was put into a separate function
+	so that it could be run in parallel 
 
-	Note - This could be done as a true database, but it's 
-	simpler for now just to make it a file
+	History
 
-	This routine still uses iraf.hselect
-
-	100308 - Added option to deal with other types of files aside from flt files.  The 
-		assumption made is that the filetype is part of the filename
-	100427 - Added crval1 and crval2 to output list because want to use this to determine
-		whether there was a dither or move between observations
-	100817 - Added checks to verify that a file found by find actually exists and has the
-		appropriate image extension (namely 1)
-	110103	- Added the switch new as a stepping stone to making the routine more general. AT
-		Some point we are going to need to merge new files into old ones and that is
-		partially the reason for this.  Right now it is simply to avoid being asked
-		if one wants to make a new file
-	110104	Split off the actual writing of the file into a separate routine called
-		write_time_sorted in order to make sublists.  Any change in the information 
-		that is gathered by make_ordered list, needs to be relected in that routine
-	110121	Added a line to assure that PI names had no spaces.  This was because running
-		split on records caused with spaces int he PI name was failing.  The alternative
-		which was to change the separated character to a tab seemed more trouble
-	120330	Added a kludge to add a date for a raw data file.  The prupose of this date is 
-		resolve situations in which multiple versions of the same file are in the
-		directory structure.  The choice is only accurate to the day
-	130820	Revised the way in which searched for the date in raw data files.
-	140306	Add capability to check for scanned observations.
+	160118	ksl	Added
 	'''
-
-	if filetype!='flt':
-		fileroot=fileroot+'_'+filetype
-
-
-	backup(fileroot+'.ls')
-	os.system('find . -follow -name \*%s.fits  -print 1>files.ls 2>/tmp/foo; rm /tmp/foo' % filetype)
-
-	f=open('files.ls','r')
-	lines=f.readlines()
-	f.close()
 
 	records=[]
 	times=[]
@@ -973,8 +938,112 @@ def make_ordered_list(fileroot='observations',apertures='full',filetype='flt',ne
 		i=i+1
 		if i%100 == 1:
 			print 'Inspected %6d of %6d datasets --> %6d IR datasets' % (i,len(lines),len(records))
-
 	print 'Inspected %6d of %6d datasets --> %6d IR datasets' % (i,len(lines),len(records))
+	return times,records
+
+
+def info_helper(args):
+	'''
+	This repackages the argments so that they can be used in parallel processing
+
+	Notes:
+
+	The issue here is that you only can pass a single argument via the Pool mechanism.
+	This simple allows that.
+	'''
+
+	return get_info(*args)
+
+
+
+def make_ordered_list(fileroot='observations',apertures='full',filetype='flt',new='no',np=1):
+	'''
+	find all of the observations in all subdiretories and make
+	a time ordered list of the observations from files of a
+	given filetype, e. g. flt.  If apertures == 'full' only
+	put full frames into the list.  Otherwise, include subarrays
+
+
+
+	Note - This could be done as a true database, but it's 
+	simpler for now just to make it a file
+
+	This routine still uses iraf.hselect
+
+	100308 - Added option to deal with other types of files aside from flt files.  The 
+		assumption made is that the filetype is part of the filename
+	100427 - Added crval1 and crval2 to output list because want to use this to determine
+		whether there was a dither or move between observations
+	100817 - Added checks to verify that a file found by find actually exists and has the
+		appropriate image extension (namely 1)
+	110103	- Added the switch new as a stepping stone to making the routine more general. AT
+		Some point we are going to need to merge new files into old ones and that is
+		partially the reason for this.  Right now it is simply to avoid being asked
+		if one wants to make a new file
+	110104	Split off the actual writing of the file into a separate routine called
+		write_time_sorted in order to make sublists.  Any change in the information 
+		that is gathered by make_ordered list, needs to be relected in that routine
+	110121	Added a line to assure that PI names had no spaces.  This was because running
+		split on records caused with spaces int he PI name was failing.  The alternative
+		which was to change the separated character to a tab seemed more trouble
+	120330	Added a kludge to add a date for a raw data file.  The prupose of this date is 
+		resolve situations in which multiple versions of the same file are in the
+		directory structure.  The choice is only accurate to the day
+	130820	Revised the way in which searched for the date in raw data files.
+	140306	Add capability to check for scanned observations.
+	160118  Added the possibility of running multiple processors
+	'''
+
+	if filetype!='flt':
+		fileroot=fileroot+'_'+filetype
+
+
+	backup(fileroot+'.ls')
+	xstart=time.clock()
+	os.system('find . -follow -name \*%s.fits  -print 1>files.ls 2>/tmp/foo; rm /tmp/foo' % filetype)
+	dtime=time.clock()-xstart
+	print 'Found all of the files to read in %f s' % dtime
+	xstart=time.clock()
+
+
+	f=open('files.ls','r')
+	lines=f.readlines()
+	f.close()
+
+	if np<=1 or len(lines)<np:
+		times,records=get_info(lines,filetype)
+	else:
+		inputs=[]
+		idelta=len(lines)/(np+1)
+		i=0
+		while i < len(lines):
+			imin=i
+			imax=i+idelta
+			if imax>len(lines):
+				imax=len(lines)
+			xinputs=lines[imin:imax]
+			inputs.append([xinputs,filetype])
+			i=i+idelta
+
+		i=0
+		while i<len(inputs):
+			print i,inputs[i]
+			i=i+1
+
+		p=Pool(np)  
+
+		times=[]
+		records=[]
+		for one in p.map(info_helper,inputs):
+			times=times+one[0]
+			records=records+one[1]
+	
+
+	# print 'times',len(times)
+	# print 'records',len(records)
+
+	dtime=time.clock()-xstart
+	print 'Inspected all of the files in %f s' % dtime
 	
 
 	if len(times)==0:
@@ -1343,6 +1412,7 @@ def steer(argv):
 	new_ls_file='no'
 	new_summary_file='no'
 	root='observations'
+	np=1
 
 
 	i=1
@@ -1364,6 +1434,9 @@ def steer(argv):
 		elif argv[i]=='-file_type':
 			i=i+1
 			ftype=argv[i]
+		elif argv[i]=='-np':
+			i=i+1
+			np=int(argv[i]) 
 		else:
 			if i != len(argv)-1:
 				print 'Could not understand argument %d :%s' % (i,argv[i])
@@ -1373,7 +1446,10 @@ def steer(argv):
 		i=i+1
 
 	# At this point we have fully parsed the observation list
-	make_ordered_list(root,aperture,ftype,new_ls_file)
+	xstart=time.clock()
+	make_ordered_list(root,aperture,ftype,new_ls_file,np)
+	dtime=time.clock()-xstart
+	print 'Time to make the .ls file: ',dtime
 
 	# 120330 - kludge of a change to get to work for file types other than flt.  It's not 
 	# obvious to me what would make this easier though as make ordered list has to do
@@ -1381,6 +1457,8 @@ def steer(argv):
 	if ftype!='flt':
 		root=root+'_'+ftype
 	make_sum_file(root,new_summary_file)
+	dtime=time.clock()-xstart
+	print 'Time to make the .sum file: ',dtime
 
 	return
 
