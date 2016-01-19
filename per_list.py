@@ -717,9 +717,6 @@ def make_sum_file(fileroot='observations',new='no'):
 	if os.path.exists(summary_file)==False or new=='yes':
 		print '# Making a pristine summary file'
 
-		# g=open(summary_file,'w')
-		# os.chmod(summary_file,0770)
-
 		g=open_file(summary_file)
 
 		for record in records:
@@ -740,8 +737,6 @@ def make_sum_file(fileroot='observations',new='no'):
 			word=one.split()
 			datasets.append(word[0])
 			
-		# g=open('tmp.sum','w')
-		# os.chmod('tmp.sum',0770)
 
 		g=open_file('tmp.sum')
 
@@ -804,6 +799,7 @@ def check_sum_file(new='tmp.sum',old='none'):
 	f.close()
 
 
+	xstart=time.time()
 	names=[]
 	dups=0
 	for line in lines:
@@ -823,9 +819,13 @@ def check_sum_file(new='tmp.sum',old='none'):
 	string='# Check of %s revealed %d duplicates' % (new,dups)
 	print string
 	g.write('%s\n' % string)
+	delta_t=time.time()-xstart
+	print '# check_sum_file: The check for duplicates took %s s' % delta_t
 
 
 	if old!='none':
+		xstart=time.time()
+
 		try:
 			f=open(old,'r')
 			old_lines=f.readlines()
@@ -851,10 +851,10 @@ def check_sum_file(new='tmp.sum',old='none'):
 		string='# Check of %s revealed %d lost records' % (old,nlost)
 		print string
 		g.write('%s\n' % string)
-
-
+		print '# check_sum_file: The check for missing records took %s s' % delta_t
 
 	g.close()
+
 
 	return dups
 
@@ -862,7 +862,7 @@ def check_sum_file(new='tmp.sum',old='none'):
 
 
 
-def get_info(lines,filetype):
+def get_info(lines,apertures,filetype):
 	'''
 	Get all of the keyword information for a set of files and return this
 
@@ -992,6 +992,8 @@ def make_ordered_list(fileroot='observations',apertures='full',filetype='flt',ne
 	130820	Revised the way in which searched for the date in raw data files.
 	140306	Add capability to check for scanned observations.
 	160118  Added the possibility of running multiple processors
+	160119  Switched from time.clock to time.time so that everything would be in wall clock
+		time
 	'''
 
 	if filetype!='flt':
@@ -999,11 +1001,11 @@ def make_ordered_list(fileroot='observations',apertures='full',filetype='flt',ne
 
 
 	backup(fileroot+'.ls')
-	xstart=time.clock()
+	xstart=time.time()
 	os.system('find . -follow -name \*%s.fits  -print 1>files.ls 2>/tmp/foo; rm /tmp/foo' % filetype)
-	dtime=time.clock()-xstart
-	print 'Found all of the files to read in %f s' % dtime
-	xstart=time.clock()
+	search_time=dtime=time.time()-xstart
+	print '# Found all of the files to read in %f s' % dtime
+	xstart=time.time()
 
 
 	f=open('files.ls','r')
@@ -1011,7 +1013,7 @@ def make_ordered_list(fileroot='observations',apertures='full',filetype='flt',ne
 	f.close()
 
 	if np<=1 or len(lines)<np:
-		times,records=get_info(lines,filetype)
+		times,records=get_info(lines,apertures,filetype)
 	else:
 		inputs=[]
 		idelta=len(lines)/(np+1)
@@ -1022,7 +1024,7 @@ def make_ordered_list(fileroot='observations',apertures='full',filetype='flt',ne
 			if imax>len(lines):
 				imax=len(lines)
 			xinputs=lines[imin:imax]
-			inputs.append([xinputs,filetype])
+			inputs.append([xinputs,apertures,filetype])
 			i=i+idelta
 
 		i=0
@@ -1042,7 +1044,7 @@ def make_ordered_list(fileroot='observations',apertures='full',filetype='flt',ne
 	# print 'times',len(times)
 	# print 'records',len(records)
 
-	dtime=time.clock()-xstart
+	key_time=dtime=time.time()-xstart
 	print 'Inspected all of the files in %f s' % dtime
 	
 
@@ -1051,7 +1053,10 @@ def make_ordered_list(fileroot='observations',apertures='full',filetype='flt',ne
 		return []
 	# Now sort this all on the time
 	# This returns an index of the order of the lines
+	xstart=time.time()
 	order=numpy.argsort(times)
+	sort_time=dtime=time.time-xstart()
+	print 'Time to sort the records %s s' % dtime
 
 	lastime=float(records[len(order)-1][6])
 	
@@ -1061,13 +1066,17 @@ def make_ordered_list(fileroot='observations',apertures='full',filetype='flt',ne
 
 	# Now check for uniqueness files
 
-	# print 'test ',time_sorted[0]
 
 
 	# Now write the time sorted file
+	xstart=time.time()
 	write_ordered_list(fileroot,time_sorted)
+	write_time=time.time()-xstart
+	print '# Time to write the .ls file  %s s' % write_time
 
 	print '# Completed creating %s.ls' % (fileroot)
+
+	print '# make_ordered_list: times',search_time,key_time,sort_time,write_time
 
 	return time_sorted
 	
@@ -1446,19 +1455,22 @@ def steer(argv):
 		i=i+1
 
 	# At this point we have fully parsed the observation list
-	xstart=time.clock()
+
+	xstart=time.time()
 	make_ordered_list(root,aperture,ftype,new_ls_file,np)
-	dtime=time.clock()-xstart
-	print 'Time to make the .ls file: ',dtime
+	dtime=time.time()-xstart
+	print '# Time to make the .ls file: ',dtime
 
 	# 120330 - kludge of a change to get to work for file types other than flt.  It's not 
 	# obvious to me what would make this easier though as make ordered list has to do
-	# a file serach for files of a specific type.
+	# a file search for files of a specific type.
 	if ftype!='flt':
 		root=root+'_'+ftype
+
+	dtime=time.time()-xstart
 	make_sum_file(root,new_summary_file)
-	dtime=time.clock()-xstart
-	print 'Time to make the .sum file: ',dtime
+	dtime=time.time()-xstart
+	print '# Time to make the .sum file: ',dtime
 
 	return
 
