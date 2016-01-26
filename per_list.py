@@ -1016,7 +1016,7 @@ def make_ordered_list(fileroot='observations',apertures='full',filetype='flt',ne
 		times,records=get_info(lines,apertures,filetype)
 	else:
 		inputs=[]
-		idelta=len(lines)/(np+1)
+		idelta=len(lines)/np +1
 		i=0
 		while i < len(lines):
 			imin=i
@@ -1027,10 +1027,10 @@ def make_ordered_list(fileroot='observations',apertures='full',filetype='flt',ne
 			inputs.append([xinputs,apertures,filetype])
 			i=i+idelta
 
-		i=0
-		while i<len(inputs):
-			print i,inputs[i]
-			i=i+1
+		# i=0
+		# while i<len(inputs):
+		# 	print i,inputs[i]
+		# 	i=i+1
 
 		p=Pool(np)  
 
@@ -1055,8 +1055,8 @@ def make_ordered_list(fileroot='observations',apertures='full',filetype='flt',ne
 	# This returns an index of the order of the lines
 	xstart=time.time()
 	order=numpy.argsort(times)
-	sort_time=dtime=time.time-xstart()
-	print 'Time to sort the records %s s' % dtime
+	sort_time=dtime=time.time()-xstart
+	print '# Time to sort the records %s s' % dtime
 
 	lastime=float(records[len(order)-1][6])
 	
