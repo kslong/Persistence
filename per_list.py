@@ -346,52 +346,57 @@ def check4duplicates(records):
 
 	100817	Added checks to trap problems parsing times.
 	110120	This is a new attempt to find the duplicates and select the last one
+	160127  Modified again to speed this up (when there are large numbers of files
+		to examine.  If there are no duplicates this is quite quick.  Even
+		when there are duplicates this is about 3x faster than the old method.
 	'''
 
 
+	xstart=time.time()
+
 	ok=[]
+	names=[]
 	for record in records:
 		ok.append('ok')
+		names.append(record[1])
 	
-	i=0
-	while i<len(records):
+	unique=set(names)
+	if len(unique)==len(names):
+		print 'check4duplicates: There are no duplicates in the directory structure'
+		return ok
+	else:
+		duplicate_names=[]
+		print 'check4duplicates: Warning: There are %d duplicate datasets in the directory structure' % (len(names)-len(unique))
+		for one in unique:
+			icount=names.count(one)
+			if icount>1:
+				duplicate_names.append(one)
+				hold=[]
+				j=0
+				while j<len(records):
+					if names[j]==one:
+						hold.append(j)
+						if len(hold)==icount:
+							break   # We have them all
+					j=j+1
+				times=[]
+				for one in hold:
+					times.append(records[one][17])
 
-		# if we have already determined that this record is nok, then don't investigate
-		# further.
-		if ok[i]!='ok':
-			i=i+1
-			continue
+				times=numpy.array(times)
+				order=numpy.argsort(times) # Give me the order of the times
+				last=order[len(order)-1]
 
-		one=records[i]
-		hold=[i]
+				k=0
+				while k<len(hold):
+					if k==last:
+						ok[hold[k]]='ok'
+					else:
+						ok[hold[k]]='nok'
+					k=k+1
 
-		j=i+1
-		while j<len(records):
-			two=records[j]
-			if one[1]==two[1]:
-				hold.append(j)
-			j=j+1
+	print 'Check for duplicates in direcory structure took:',time.time()-xstart
 
-		if len(hold)>1:  # The length of hold must be greated than 1 to have to worry about duplicates
-
-			times=[]
-			for one in hold:
-				times.append(records[one][17])
-
-			times=numpy.array(times)
-			order=numpy.argsort(times) # Give me the order of the times
-
-			last=order[len(order)-1]
-
-			k=0
-			while k<len(hold):
-				if k==last:
-					ok[hold[k]]='ok'
-				else:
-					ok[hold[k]]='nok'
-				k=k+1
-		# Now go on to the next record.  
-		i=i+1
 	return ok
 	
 
