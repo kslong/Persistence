@@ -774,84 +774,163 @@ def check_sum_file(new='tmp.sum',old='none'):
 	'''
 	Check a summary file for unique dataset names
 
+	Description
+
+	The routine checks the new summary file to assure 
+	that there is only one line with a given dataset name.
+	It returns the number of duplicate records
+
+	If a file name is given in old, then the routine checks
+	whether there are any records that were in the old file, that
+	are not in the new file.  This can happen and not be an error,
+	but the results are recorded in a file with the extension problem
+
+	Notes:
+
+	There should be one and only one record  for each
+	record in observaitions.ls
+
 	110119 - Expanded the questions that were asked 
+	150127 ksl Rewrote so that it was much faster by using sets
 	'''
+
+	# Read the new summary file
 	summary_file=new
-
 	if os.path.exists(summary_file)==False:
-		print 'There is no summary file names %s.sum to check' % fileroot
+		print 'Error: check_sum: There is no summary file names %s.sum to check' % fileroot
 		return
-	
-	# problem_file=summary_file+'.problem'
-	# if os.path.isfile(problem_file):
-	# 	os.remove(problem_file)
-	# g=open(problem_file,'w')
-	# os.chmod(problem_file,0770)
-
-	g=open_file(summary_file+'.problem')
-
-	string='# Checking summary file or files %s %s' % (new,old)
-	print string
-	g.write('%s\n' % string)
-
 	f=open(summary_file,'r')
 	lines=f.readlines()
 	f.close()
 
+	
+	# Open a diagnostic file to record any problems
+	g=open_file(summary_file+'.problem')
+	string='# Checking new (%s) against (%s) old summary file' % (new,old)
+	print string
+	g.write('%s\n' % string)
+
+	# Check for duplicate datasets in new summary file
 
 	xstart=time.time()
 	names=[]
-	dups=0
 	for line in lines:
 		x=line.strip()
 		word=x.split()
-		j=0
-		while j<len(names):
-			name=names[j]
-			if word[0]==name:
-				g.write('%5d %s' % (j,line))
+		names.append(word[0])
+
+	unique=set(names)
+	if len(unique)==len(names):
+		dups=0
+	else:  # There is a problem and so the duplicate check must be carried out
+		print 'Error: There are duplicate datasets in the the newly created summary file %s' % new
+		print 'A detailed check is now underway'
+		dup_names=[]
+		dups=0
+		for one in unique:
+			jj=names.count(one)
+			if jj>1:
+				g.write('Duplicate: %5d %s\n' % (jj,one))
+				dup_names.append(one)
 				dups=dups+1
-				break
-			j=j+1
-		if j==len(names):
-			names.append(word[0])
-	
+
 	string='# Check of %s revealed %d duplicates' % (new,dups)
 	print string
 	g.write('%s\n' % string)
 	delta_t=time.time()-xstart
-	print '# check_sum_file: The check for duplicates took %s s' % delta_t
+	print 'check_sum: time to search for duplicate records in the new .sum file: ',delta_t
 
+	# Check for datasets that were in the .sum file before but are missing now
 
 	if old!='none':
+		print 'Checking for datasets that were in the last .sum file but are now missing'
 		xstart=time.time()
+		old_names=[]
 
 		try:
 			f=open(old,'r')
 			old_lines=f.readlines()
 			f.close()
+
+			for one in old_lines:
+				 x=one.strip()
+				 word=x.split()
+				 old_names.append(word[0])
 		except IOError:
 			old_lines=[]
 
 		nlost=0
-		for one in old_lines:
-			x=one.strip()
-			word=x.split()
-			j=0
-			while j<len(names):
-				name=names[j]
-				if word[0]==name:
-					break   # Then we have a match
-				j=j+1
-			if j==len(names): # There was no match
-				print 'Lost record:',x
-				g.write('%5d %s' % (j,one))
+		for one in old_names:
+			if names.count(one)==0:
+				g.write('Missing: %s\n' % (one))
 				nlost=nlost+1
 
-		string='# Check of %s revealed %d lost records' % (old,nlost)
+		string='# Check of %s revealed %d datasets no longer in the .sum file' % (old,nlost)
+		if nlost>0:
+			print 'Warning: Lost datasets may not be a problem, but are noted as a warning of something possibly worth invesigation'
 		print string
 		g.write('%s\n' % string)
 		print '# check_sum_file: The check for missing records took %s s' % delta_t
+
+
+
+
+
+
+
+	# xstart=time.time()
+	# names=[]
+	# dups=0
+	# for line in lines:
+	# 	x=line.strip()
+	# 	word=x.split()
+	# 	j=0
+	# 	while j<len(names):
+	# 		name=names[j]
+	# 		if word[0]==name:
+	# 			g.write('%5d %s' % (j,line))
+	# 			dups=dups+1
+	# 			break
+	# 		j=j+1
+	# 	if j==len(names):
+	# 		names.append(word[0])
+# 	
+	# string='# Check of %s revealed %d duplicates' % (new,dups)
+	# print string
+	# g.write('%s\n' % string)
+	# delta_t=time.time()-xstart
+	# print '# check_sum_file: The check for duplicates took %s s' % delta_t
+
+
+	# if old!='none':
+	# 	xstart=time.time()
+	#
+	#	try:
+	#		f=open(old,'r')
+	#		old_lines=f.readlines()
+	#		f.close()
+	#	except IOError:
+	#		old_lines=[]
+#
+	#	nlost=0
+	#	for one in old_lines:
+	#		x=one.strip()
+	#		word=x.split()
+	#		j=0
+	#		while j<len(names):
+	#			name=names[j]
+	#			if word[0]==name:
+	#				break   # Then we have a match
+	#			j=j+1
+	#		if j==len(names): # There was no match
+	#			print 'Lost record:',x
+	#			g.write('%5d %s' % (j,one))
+	#			nlost=nlost+1
+#
+	#	string='# Check of %s revealed %d lost records' % (old,nlost)
+	#	print string
+	#	g.write('%s\n' % string)
+	#	print '# check_sum_file: The check for missing records took %s s' % delta_t
 
 	g.close()
 
