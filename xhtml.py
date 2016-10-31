@@ -10,7 +10,7 @@ This is a small set of routines that creates html files
 
 Command line usage (if any):
 
-	usage: html.py  will run a basic test of the routines
+	usage: xhtml.py  will run a basic test of the routines
 
 Description:  
 
@@ -25,6 +25,7 @@ Notes:
 History:
 
 110505 ksl Coding begun
+161031 ksl Renamed to xhtml.py to avoid conflict with andaconda
 
 '''
 
@@ -212,4 +213,4 @@ if __name__ == "__main__":
 		# doit(int(sys.argv[1]))
 		doit(sys.argv[1])
 	else:
-		print 'usage: html.py test.html'
+		print 'usage: xhtml.py test.html'

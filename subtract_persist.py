@@ -362,7 +362,7 @@ def get_persistence(exp=300.,dt=1000.,models='per_model/models.ls'):
 
 	where:
 
-	exp	the expousre of the stimulus image
+	exp	the exposure of the stimulus image
 	dt	the time since the stimulus image was taken
 	models	the file containing times and links to the persitance
 		curves
