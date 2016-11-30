@@ -81,6 +81,7 @@ History:
 151022	ksl	Restored iraf/pyraf for performance reasons
 160104	ksl	Changes to lock and unlock files so that parallel processing
 		will not corrupt the obervations.sum file
+161130  ksl Remove pyraf dependencies because it is going away.
 
 '''
 
@@ -96,7 +97,7 @@ import pylab
 import shutil
 import per_fits
 from astropy.io import fits
-import pyraf
+# import pyraf
 from multiprocessing import Pool
 
 
@@ -485,9 +486,10 @@ def check4scan(filename='./Visit43/ic9t43j1q_flt.fits[1]'):
 	# Now we should have the name of the spt file
 	if os.path.exists(xfile)==True:
 		# Revert to iraf/pyraf for performance reasons
-		# xx=per_fits.get_keyword(xfile,0,'SCAN_TYP')
-		xx=pyraf.iraf.hselect(xfile+'[0]','SCAN_TYP','yes',Stdout=1)
-		xx=xx[0].split('\t')
+		xx=per_fits.get_keyword(xfile,0,'SCAN_TYP')
+        # Elimimate pyraf dependencies because it is going away
+		# xx=pyraf.iraf.hselect(xfile+'[0]','SCAN_TYP','yes',Stdout=1)
+		# xx=xx[0].split('\t')
 	else: 
 		return 'no_spt'
 
@@ -977,37 +979,38 @@ def get_info(lines,apertures,filetype):
 
 		# 100807 Added date of file creation so could handle non-unique data sets
 		# This is the old version using pyraf, which has been put back for perfomance reasons
-		xfile='%s[1]' % line[0]
-		if pyraf.iraf.imaccess(xfile):
-			x=pyraf.iraf.hselect(xfile,'$I,rootname,proposid,linenum, instrume,detector,expstart,date-obs,time-obs,aperture,filter,exptime,crval1,crval2,targname,asn_id,pr_inv_L,date','yes',Stdout=1)
-			x=x[0].split('\t')
-			# Kluge for raw data files which have two ROOTNAME keywords for unknown reasons
-			if x[1]==x[2]:
-				x.pop(2)
-
-			x[16].replace(' ','-')  # Get rid of spaces in PI names
-			if len(x[16])==0:
-				x[16]='Unkown'
-			# Another kludge for raw files.  The is no 'date' field in the first extension as there is for flt and ima files, but DATE does exist in extension 0
-			if filetype=='raw':
-				xname=per_fits.parse_fitsname(xfile,0,'yes')
-				xx=pyraf.iraf.hselect(xname[2],'$I,DATE','yes',Stdout=1)
-				xx=xx[0].split('\t')
-				x.append(xx[1])
-			x[0]=line[0]
-
-#		# Replaced upcoming lines with iraf/pyraf for performance reasons
-#		xfile=line[0]
-#		if os.path.isfile(xfile) == True:
-#			x=per_fits.get_keyword(xfile,1,'rootname,proposid,linenum, instrume,detector,expstart,date-obs,time-obs,aperture,filter,exptime,crval1,crval2,targname,asn_id,pr_inv_L')
-#			x=[xfile]+x
-
-#			# for raw files the date is in extension 0, but for the others it is in 1.
+#		xfile='%s[1]' % line[0]
+#		if pyraf.iraf.imaccess(xfile):
+#			x=pyraf.iraf.hselect(xfile,'$I,rootname,proposid,linenum, instrume,detector,expstart,date-obs,time-obs,aperture,filter,exptime,crval1,crval2,targname,asn_id,pr_inv_L,date','yes',Stdout=1)
+#			x=x[0].split('\t')
+#			# Kluge for raw data files which have two ROOTNAME keywords for unknown reasons
+#			if x[1]==x[2]:
+#				x.pop(2)
+#
+#			x[16].replace(' ','-')  # Get rid of spaces in PI names
+#			if len(x[16])==0:
+#				x[16]='Unkown'
+#			# Another kludge for raw files.  The is no 'date' field in the first extension as there is for flt and ima files, but DATE does exist in extension 0
 #			if filetype=='raw':
-#				date=per_fits.get_keyword(xfile,0,'date')
-#			else:
-#				date=per_fits.get_keyword(xfile,1,'date')
-#			x.append(date[0])
+#				xname=per_fits.parse_fitsname(xfile,0,'yes')
+#				xx=pyraf.iraf.hselect(xname[2],'$I,DATE','yes',Stdout=1)
+#				xx=xx[0].split('\t')
+#				x.append(xx[1])
+#			x[0]=line[0]
+
+		# Replaced upcoming lines with iraf/pyraf for performance reasons
+        # 161130 - Returned to using astropy as iraf is disappering
+		xfile=line[0]
+		if os.path.isfile(xfile) == True:
+			x=per_fits.get_keyword(xfile,1,'rootname,proposid,linenum, instrume,detector,expstart,date-obs,time-obs,aperture,filter,exptime,crval1,crval2,targname,asn_id,pr_inv_L')
+			x=[xfile]+x
+
+			# for raw files the date is in extension 0, but for the others it is in 1.
+			if filetype=='raw':
+				date=per_fits.get_keyword(xfile,0,'date')
+			else:
+				date=per_fits.get_keyword(xfile,1,'date')
+			x.append(date[0])
 
 
 
