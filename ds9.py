@@ -36,7 +36,7 @@ import math
 import scipy
 
 # This section was imported from ghost.py
-import pyfits
+from astropy.io import fits as pyfits
 from pyraf import iraf
 import pylab
 
