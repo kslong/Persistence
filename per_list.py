@@ -986,6 +986,8 @@ def get_info(lines,apertures,filetype):
 				x.pop(2)
 
 			x[16].replace(' ','-')  # Get rid of spaces in PI names
+			if len(x[16])==0:
+				x[16]='Unkown'
 			# Another kludge for raw files.  The is no 'date' field in the first extension as there is for flt and ima files, but DATE does exist in extension 0
 			if filetype=='raw':
 				xname=per_fits.parse_fitsname(xfile,0,'yes')
