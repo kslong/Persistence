@@ -96,8 +96,10 @@ import pylab
 import shutil
 import per_fits
 from astropy.io import fits
+from astropy.io import ascii
 from multiprocessing import Pool
 from astropy.table import Table
+from astropy.table import join
 
 
 # Utilities
@@ -717,54 +719,53 @@ def make_sum_file(fileroot='observations',new='no'):
 
 
     gmt=time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime())
+    words=gmt.split()
+    proc_date=words[0]
+    proc_time=words[1]
 
-    summary_file=fileroot+'.sum'
+    summary_file=fileroot+'.sum.txt'
+
+
+    # Create pristine file
+
+    g=x['Dataset','ProgID','ExpStart']
+    g['Proc-Date']=proc_date
+    g['Proc-Time']=proc_time
+    g['Proc-Stat']='Unprocessed'
+    g['E0.10']=-99 
+    g['E0.03']=-99 
+    g['E0.01']=-99 
+    g['I0.10']=-99 
+    g['I0.03']=-99 
+    g['I0.01']=-99 
+    g['PerHTML']='--'
 
 
     if os.path.exists(summary_file)==False or new=='yes':
         print('# Making a pristine summary file')
+        g.write(summary_file,format='ascii.fixed_width_two_line')
 
-        g=open_file(summary_file)
-
-        for record in records:
-            string='%-10s %5s %20s  %20s %-20s' % (record[1],record[2],record[6],gmt,'Unprocessed')
-            g.write('%s\n' % string)
-        g.close()
     else:
         print('# Merging new records into old list')
         try:
-            f=open(summary_file,'r')
-            summary=f.readlines()
+            xsum=ascii.read(summary_file)
         except  IOError:
             print('Error: make_sum_file: Could not read summary file %s ' % summary_file)
 
-        # Get the dataset names in the summary file
-        datasets=[]
-        for one in summary:
-            word=one.split()
-            datasets.append(word[0])
-            
 
-        g=open_file('tmp.sum')
-
-        # The next portion is not very smart since it always goes through the summary information
-        # from the beginning.  But is should be "sure". 
-        for record in records:
+        for one in g:
             i=0
-            while i<len(datasets):
-                if datasets[i]==record[1]:
+            while i<len(xsum):
+                if xsum['Dataset'][i]==one['Dataset']:
+                    print('gotcha')
+                    one=xsum[i]
                     break
-                i=i+1
+                i+=1
+        g.write('tmp.sum.txt',format='ascii.fixed_width_two_line')
 
-            if i==len(datasets):
-                string='%-10s %5s %20s  %20s %-20s' % (record[1],record[2],record[6],gmt,'Unprocessed')
-                g.write('%s\n' % string)
-            else:
-                g.write(summary[i])
 
-        g.close()
+        ndup=check_sum_file('tmp.sum.txt',summary_file)
 
-        ndup=check_sum_file('tmp.sum',summary_file)
         if ndup>0:
             print('Error: make_sum_file: Since there were duplicates in th tmp file, not moving to %s'  % (summary_file))
             return 'NOK  - Since there were duplicates in th tmp file, not moving to %s'  % (summary_file)
@@ -1267,6 +1268,19 @@ def write_ordered_list(fileroot='observations',records=[]):
     x['PI']=investigator
     x['File-date']=file_create
 
+    # Remove duplicates from the output table
+
+    i=0
+    select=[]
+    while i<len(x):
+        if ok[i]=='ok':
+            select.append(i)
+        else:
+            print('Error: Duplicate: removing',x[i])
+        i+=1
+    x=x[select]
+
+
     x.write(fileroot+'.txt',format='ascii.fixed_width_two_line')
 
     return
@@ -1286,7 +1300,7 @@ def read_ordered_list0(fileroot='observations'):
     try:
         x=Table.read(fileroot+'.txt',format='ascii.fixed_width_two_line')
     except:
-        print('Error: read_ordered_list0: Could not open %s ' % (fileroot+'.ls'))
+        print('Error: read_ordered_list0: Could not open %s ' % (fileroot+'txt'))
         return []
 
     return(x)

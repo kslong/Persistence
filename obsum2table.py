@@ -164,8 +164,8 @@ def doit(filename='observations.sum',outputfile='observaations.sum.txt'):
     x=Table([dataset],names=['Dataset'])
     x['ProgID']=prog_id
     x['ExpStart']=date
-    x['Date-Obs']=xobs
-    x['Time=Obs']=xtime
+    x['Proc-Date']=xobs
+    x['Proc-Time']=xtime
     x['ProcStat']=processed
     x['E0.10']=ext1
     x['E0.03']=ext2
