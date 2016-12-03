@@ -78,7 +78,7 @@ def set(name):
 	elif os.path.isfile(name)==True:
 		isdir=False
 	else:
-		print 'Error: set: %s does not exist' % name     
+		print('Error: set: %s does not exist' % name)     
 		return False
 
 	# Next get the absolute path name of the file or directory
@@ -102,8 +102,8 @@ def set(name):
 
 	# Now set the permission of the directory or file
 	if isdir:
-		os.chmod(name,02770)
+		os.chmod(name,0o2770)
 	else:
-		os.chmod(name,0770)
+		os.chmod(name,0o770)
 
 	return True
