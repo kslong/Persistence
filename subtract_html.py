@@ -34,7 +34,7 @@ import numpy
 import pylab
 import time
 import per_list
-import html
+import xhtml as html
 
 def read_history(history_file):
 	'''
