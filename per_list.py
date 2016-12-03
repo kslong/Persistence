@@ -1190,7 +1190,7 @@ def write_ordered_list(fileroot='observations',records=[]):
 	i=0
 	while i<len(records):
 		record=records[i]
-		# print 'xxx',record
+		# print ('xxx',record)
 		if ok[i]=='ok':
 			xstring='%-50s ' % record[0]  # File name
 		else:
@@ -1201,21 +1201,22 @@ def write_ordered_list(fileroot='observations',records=[]):
 		xstring=xstring+'%-5s ' % record[4]  # Intrum
 		xstring=xstring+'%-5s ' % record[5]  # detector
 		# Next line needed for pyraf
-		xstring=xstring+'%14.7f ' % (eval(record[6]))  # expstart
+		# xstring=xstring+'%14.7f ' % (eval(record[6]))  # expstart
 		# Next line removed to switch from astropy to pyraf
-		# xstring=xstring+'%14.7f ' % record[6]  # expstart
+		xstring=xstring+'%14.7f ' % record[6]  # expstart
 		xstring=xstring+'%-5s ' % record[7]  # date-obs
 		xstring=xstring+'%-5s ' % record[8]  # time-obs
 		xstring=xstring+'%-5s ' % record[9]  # aperture
 		xstring=xstring+'%-5s ' % record[10] # filter 
 		# Next line needed for pyraf
-		xstring=xstring+'%7.1f ' % (eval(record[11])) # exptime
-		xstring=xstring+'%10.6f ' % (eval( record[12])) # crval1 
-		xstring=xstring+'%10.6f ' % (eval(record[13])) # crval2  
-		# Next lines removed in swich back to pyraf
-		# xstring=xstring+'%7.1f ' % record[11] # exptime
-		# xstring=xstring+'%10.6f ' % record[12] # crval1 
-		# xstring=xstring+'%10.6f ' % record[13] # crval2  
+		# xstring=xstring+'%7.1f ' % (eval(record[11])) # exptime
+		# xstring=xstring+'%10.6f ' % (eval( record[12])) # crval1 
+		# xstring=xstring+'%10.6f ' % (eval(record[13])) # crval2  
+		# Next lines removed in switch back to pyraf
+        # 161130 Restored the astropy versions of this
+		xstring=xstring+'%7.1f ' % record[11] # exptime
+		xstring=xstring+'%10.6f ' % record[12] # crval1 
+		xstring=xstring+'%10.6f ' % record[13] # crval2  
 		xstring=xstring+'%-5s ' % record[14] # targname
 		xstring=xstring+'%-5s ' % record[15] # Assn_id 
 		xstring=xstring+'%-5s ' % record[16] # PI      
