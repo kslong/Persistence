@@ -115,8 +115,6 @@ def make_html(lines,filename='observations.html'):
 
 	g=per_list.open_file(filename)
 
-	# g=open(filename,'w')
-	# os.chmod(filename,0770)
 
 	g.write('%s\n' % string)
 	return

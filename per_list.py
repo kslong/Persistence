@@ -731,14 +731,26 @@ def make_sum_file(fileroot='observations',new='no'):
     g=x['Dataset','ProgID','ExpStart']
     g['Proc-Date']=proc_date
     g['Proc-Time']=proc_time
-    g['Proc-Stat']='Unprocessed'
-    g['E0.10']=-99 
-    g['E0.03']=-99 
-    g['E0.01']=-99 
-    g['I0.10']=-99 
-    g['I0.03']=-99 
-    g['I0.01']=-99 
+    g['ProcStat']='Unprocessed'
+    g['E0.10']=-99.
+    g['E0.03']=-99.
+    g['E0.01']=-99.
+    g['I0.10']=-99.
+    g['I0.03']=-99.
+    g['I0.01']=-99.
     g['PerHTML']='--'
+
+    # The next steps are necessary, whenever the an ascii table is
+    # read in, and there is a chance the updates will result in 
+    # strings which are longer than the current format.  Withot
+    # this the strings will be truncated in the ouput table
+    for col in g.itercols():
+        if col.dtype.kind in 'SU':
+               g.replace_column(col.name, col.astype('object'))
+
+    print('fix',g)
+
+    print('format',g['PerHTML'].format)
 
 
     if os.path.exists(summary_file)==False or new=='yes':
@@ -753,14 +765,18 @@ def make_sum_file(fileroot='observations',new='no'):
             print('Error: make_sum_file: Could not read summary file %s ' % summary_file)
 
 
+
+        j=0
         for one in g:
             i=0
+
             while i<len(xsum):
                 if xsum['Dataset'][i]==one['Dataset']:
-                    print('gotcha')
-                    one=xsum[i]
+                    g[j]=xsum[i]
                     break
                 i+=1
+            j=j+1
+
         g.write('tmp.sum.txt',format='ascii.fixed_width_two_line')
 
 
@@ -774,7 +790,7 @@ def make_sum_file(fileroot='observations',new='no'):
         # gmt=time.strftime("%y%m%d.%H%M", time.gmtime())  # Create a string to use to name the updated file. As written a new file a minute
         # proc=subprocess.Popen('mv %s %s.%s.old' % (summary_file,summary_file,gmt),shell=True,stdout=subprocess.PIPE)
         backup(summary_file)
-        proc=subprocess.Popen('mv %s %s' % ('tmp.sum',summary_file),shell=True,stdout=subprocess.PIPE)
+        proc=subprocess.Popen('mv %s %s' % ('tmp.sum.txt',summary_file),shell=True,stdout=subprocess.PIPE)
     return
 
 

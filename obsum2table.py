@@ -104,7 +104,7 @@ def read_table(filename='foo.txt',format=''):
     return data
 
 
-def doit(filename='observations.sum',outputfile='observaations.sum.txt'):
+def doit(filename='observations.sum',outputfile='observations.sum.txt'):
     '''
     Do something magnificent
 
