@@ -55,7 +55,7 @@ History:
 
 import sys
 import os
-import string
+# import string
 import numpy
 # This is part of the stsci modules; at one point it was part of scipy but not today
 from stsci import convolve 
@@ -75,7 +75,7 @@ def smooth(image,size):
 	# print 'smooth',numpy.max(z),numpy.min(z),numpy.median(z)
 	return z
 
-def find_peaks(image,mask='none',sep=20,maxno=20):
+def find_peaks(image,mask=[],sep=20,maxno=20):
 	'''
 	Find brightest peaks in an image that are separated by at least
 	"sep" pixels.  
@@ -90,11 +90,11 @@ def find_peaks(image,mask='none',sep=20,maxno=20):
 
 	110203	ksl Fixed the way mask is handled.
 	111011	ksl Modify the logic to try to do a better job eliminating
-		    persistence peaks near bright sources.  The basic change
-		    was to first find the peaks regardless of the mask (e.g
-		    the original science image, and then to eliminate peaks
-		    later.  What had been happening is that we were finding
-		    subsidiary peaks in near a bright object.
+            persistence peaks near bright sources.  The basic change
+            was to first find the peaks regardless of the mask (e.g
+            the original science image, and then to eliminate peaks
+            later.  What had been happening is that we were finding
+            subsidiary peaks in near a bright object.
 	'''
 
 
@@ -128,7 +128,7 @@ def find_peaks(image,mask='none',sep=20,maxno=20):
 		i=i-1
 		ii=zz[i]
 		new_source='yes'
-		
+
 		# Do not allow sources near the edges of the detector
 		if 50>x[ii] or x[ii]>xsize-50:
 			continue
@@ -149,8 +149,8 @@ def find_peaks(image,mask='none',sep=20,maxno=20):
 			# print 'Trial source at %3d %3d %8.3f %8.3f'% (x[ii],y[ii],image[y[ii],x[ii]],mask[y[ii],x[ii]])
 
 	# Each record of source  contains an x,y position, the value in the persistence image and the value in the mask
-	if mask=='none':
-		print 'peaks: No mask! Found are %d peaks in smoothed persistence image with flux > %f' % (len(sources),im[i])
+	if mask==[]:
+		print('peaks: No mask! Found are %d peaks in smoothed persistence image with flux > %f' % (len(sources),im[i]))
 		return sources
 
 	# print 'test: At this point we have %d soures' % len(sources)
@@ -280,17 +280,17 @@ def doit(filename='foo.fits',mask_file='none',box=3,maxno=25,history_file='histo
 		x=filename.split('/')
 		name=x[len(x)-1]
 		# print 'name',name
-		j=string.rindex(name,'.')
+		j=name.rindex('.')
 		outroot=name[0:j]
 		# print 'OK got',outroot
 	except ValueError:
 		outroot=filename
-		print 'File had no extensions, using entire name'
+		print('File had no extensions, using entire name')
 
 	# Read the persistence file
 	x=per_fits.get_image(filename,1)
 	if len(x)==0:
-		print 'Error: peaks:  Nothing to do since no data returned for %s' % filename
+		print('Error: peaks:  Nothing to do since no data returned for %s' % filename)
 		history.write('Peaks: Nothing to do since no data returned for %s\n' % filename)
 		return 'NOK'
 
@@ -313,7 +313,7 @@ def doit(filename='foo.fits',mask_file='none',box=3,maxno=25,history_file='histo
 	else:
 		history.write('Peaks: No mask from earlier undithered exposures\n')
 		z=smooth(x,box)
-		mask='none'
+		mask=[]
 
 	# After having set everything up call the routine that locates the peaks to use to see
 	# how well the subtraction works
@@ -325,8 +325,6 @@ def doit(filename='foo.fits',mask_file='none',box=3,maxno=25,history_file='histo
 
 	outfile=work_dir+outroot+'.peaks.dat'
 
-	# 	print 'Error: Could not open %s' % outfile
-	
 	g=per_list.open_file(outfile)
 
 	g.write('# peaks in %s\n' % filename)
@@ -363,7 +361,7 @@ def doit(filename='foo.fits',mask_file='none',box=3,maxno=25,history_file='histo
 	if os.path.isfile(figure_name):
 		os.remove(figure_name)
 	pylab.savefig(figure_name)
-	os.chmod(figure_name,0770)
+	os.chmod(figure_name,0o770)
 
 	# Generation of this summary plot is now complete.
 
@@ -402,7 +400,7 @@ def do_dataset(dataset,fileroot='observations',local='no'):
 	try:
 		mask_file=record[0]
 	except IndexError:
-		print 'NOK: dataset %s does not exist in %s.ls' % (dataset,fileroot)
+		print('NOK: dataset %s does not exist in %s.ls' % (dataset,fileroot))
 		return 'NOK: dataset %s does not exist in %s.ls' % (dataset,fileroot)
 
 
@@ -416,13 +414,13 @@ def do_dataset(dataset,fileroot='observations',local='no'):
 
 	# Fixed 111011
 	if os.path.exists(extper_file):
-		print 'Using external persistence file for dataset %s' % dataset
+		print('Using external persistence file for dataset %s' % dataset)
 		string=doit(per_file,mask_file,history_file=history_file,local=local)
 	elif os.path.exists(per_file):
-		print 'Using internal persistence file for dataset %s' % dataset
+		print('Using internal persistence file for dataset %s' % dataset)
 		string=doit(per_file,mask_file,history_file=history_file,local=local)
 	else:
-		print 'Dataset %s does not have either an external or internal persistence file' % dataset
+		print('Dataset %s does not have either an external or internal persistence file' % dataset)
 
 
 	# print 'Finished peaks for dataset %s' % dataset
@@ -444,5 +442,5 @@ if __name__ == "__main__":
 			do_dataset(name,local='no')
 
 	else:
-		print 'usage: peaks.py  datasetname'
+		print('usage: peaks.py  datasetname')
 

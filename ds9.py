@@ -29,15 +29,12 @@ History:
 import sys
 import os
 import numpy
-import pyraf
 import time
-import string
 import math
 import scipy
 
 # This section was imported from ghost.py
 from astropy.io import fits as pyfits
-from pyraf import iraf
 import pylab
 
 
@@ -50,10 +47,10 @@ def check_for_ds9():
 
 	x=os.system('which ds9')
 	if x:
-		print 'ds9 is not in your path'
+		print('ds9 is not in your path')
 	y=os.system('which xpaset')
 	if y:
-		print 'xpa software is not in your path.  Modify your path or install from links on XPA in the Reference manual for ds9'
+		print('xpa software is not in your path.  Modify your path or install from links on XPA in the Reference manual for ds9')
 	
 	if x or y:
 		return 1
@@ -74,7 +71,7 @@ def start_ds9(height=600,width=600,scale='histequ',reset='no'):
 	# First check if ds9 is already extant'
 	iok=os.system('xpaget ds9 version &> tmp.txt')
 	if iok:
-		print 'starting  ds9'
+		print('starting  ds9')
 		os.system('ds9 &')
 		time.sleep(5)  # give system a chance to instandiate ds9
 		os.system('xpaset -p ds9 scale %s'% scale)

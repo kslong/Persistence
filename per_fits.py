@@ -33,11 +33,9 @@ History:
 import sys
 import os
 
-# import pyraf
 from astropy.io import fits as pyfits
 import pylab
 import numpy
-import string
 import permissions
 
 
@@ -362,10 +360,10 @@ def get_image(filename='./11740/ib1cc5gwq_flt.fits',exten=1,rescale='no',fill=0,
         if len(data)==0:
             print('Error: get_image: returning empty array for %s extension %d' % (filename,exten))
         elif len(section)==4:
-            xmin=section[0]
-            xmax=section[1]+1
-            ymin=section[2]
-            ymax=section[3]+1
+            xmin=int(section[0])
+            xmax=int(section[1]+1)
+            ymin=int(section[2])
+            ymax=int(section[3]+1)
             data=data[xmin:xmax,ymin:ymax]
         return data
 
@@ -388,15 +386,12 @@ def get_image(filename='./11740/ib1cc5gwq_flt.fits',exten=1,rescale='no',fill=0,
         print('Error: get_image: no refdata for file %s' % filename)
         return []
 
-    # print 'shapes',numpy.shape(source_data),numpy.shape(ref_data)
+    iymin=int(ref_sizes[2]-source_sizes[2])
+    iymax=int(iymin+source_sizes[0])
 
-    iymin=ref_sizes[2]-source_sizes[2]
-    iymax=iymin+source_sizes[0]
+    ixmin=int(ref_sizes[3]-source_sizes[3])
+    ixmax=int(ixmin+source_sizes[1])
 
-    ixmin=ref_sizes[3]-source_sizes[3]
-    ixmax=ixmin+source_sizes[1]
-
-    # print ixmin,ixmax,iymin,iymax
 
     # 111109 Changed to from zeros_like to zeros to avoid numpy problem
     z=numpy.zeros(ref_data.shape,dtype=ref_data.dtype)
@@ -407,7 +402,7 @@ def get_image(filename='./11740/ib1cc5gwq_flt.fits',exten=1,rescale='no',fill=0,
     # In situations that we care about the source image should be contained in the reference image or vice versus
     # At this point I have not tried to deal with the other logical possibilities
 
-    # print 'test',len(z),iymin,iymax,ixmin,ixmax
+
     if iymin >= 0 and ixmin>=0:
         z[iymin:iymax,ixmin:ixmax]=source_data
     else:

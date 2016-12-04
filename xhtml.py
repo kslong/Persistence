@@ -213,4 +213,4 @@ if __name__ == "__main__":
 		# doit(int(sys.argv[1]))
 		doit(sys.argv[1])
 	else:
-		print 'usage: xhtml.py test.html'
+		print('usage: xhtml.py test.html')

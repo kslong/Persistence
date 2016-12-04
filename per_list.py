@@ -81,6 +81,7 @@ History:
 160104    ksl    Changes to lock and unlock files so that parallel processing
         will not corrupt the obervations.sum file
 161130  ksl Remove pyraf dependencies because it is going away.
+161204  ksl Updated for python3, and to use astropy tables
 
 '''
 
@@ -88,7 +89,6 @@ import sys
 import os
 import numpy
 import time
-import string
 import math
 import scipy
 import subprocess
@@ -507,7 +507,7 @@ def check4scan(filename='./Visit43/ic9t43j1q_flt.fits[1]'):
 
 # End utilities
 
-# Routines for making and updating the summary file
+
 
 def update_summary(dataset,status_word='Unknown',results='Whatever you want',fileroot='observations',append='yes'):
     '''
@@ -536,27 +536,27 @@ def update_summary(dataset,status_word='Unknown',results='Whatever you want',fil
     below now inserts the results into the data.  
 
 
-    101221    ksl    Coded as part of effort to get a way to check what files
-            had been processed with the persistence software
-    110103    ksl    Added a better way to keep enough summary files that one
-            might be able to roll back
-    110117    ksl    Dealt with the situation where there were not old_results
-    110721    ksl    Improved the description of the routine
-    151006    ksl    Fixed Error #553, which arose because the routine assumes one
-            often wants to append to a summary line.  Because we use index
-            to find where in the line we want to start replacing data, one
-            needs to be careful that there is no possibility that one is
-            indexing to the wrong position.
-    160105    ksl    Modified for multiprocessing
+    101221  ksl Coded as part of effort to get a way to check what files
+                had been processed with the persistence software
+    110103  ksl Added a better way to keep enough summary files that one
+                might be able to roll back
+    110117  ksl Dealt with the situation where there were not old_results
+    110721  ksl Improved the description of the routine
+    151006  ksl Fixed Error #553, which arose because the routine assumes one
+                often wants to append to a summary line.  Because we use index
+                to find where in the line we want to start replacing data, one
+                needs to be careful that there is no possibility that one is
+                indexing to the wrong position.
+    160105  ksl Modified for multiprocessing
 
     '''
 
 
     if os.path.isdir('tmp_sum')==False:
         os.mkdir('tmp_sum')
-    
 
-    summary_file=fileroot+'.sum'
+    # XXX - This works but we are not using tables here
+    summary_file=fileroot+'.sum.txt'
     gmt=time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime())
 
 
@@ -625,8 +625,10 @@ def  fixup_summary_file(datasets,fileroot='observations'):
     
     History:
 
-    160105    ksl    Coded as part of the effort to add multiprocessing
-
+    160105  ksl Coded as part of the effort to add multiprocessing
+    161204  ksl Update to handle tables. This is still a bit of a kluge
+                because the files writen out by update_sum are free format.
+                This should be fixed.
     '''
 
 
@@ -645,39 +647,55 @@ def  fixup_summary_file(datasets,fileroot='observations'):
     
     # OK at this point we have found all of the good files
 
-    summary_file=fileroot+'.sum'
 
+    gmt=time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime())
+
+    # XXX replace with correct name
+    summary_file=fileroot+'.sum.txt'
     try:
-        f=open(summary_file,'r')
-        lines=f.readlines()
-        f.close()
-    except IOError:
-        print('Error: update_summary: File %s does not exist' % summary_file)
+        xsum=ascii.read(summary_file)
+    except  IOError:
+        print('Error: update_summary : Could not read summary file %s ' % summary_file)
         return
 
+    # Fixup table so strings will not be truncated
+    for col in xsum.itercols():
+        if col.dtype.kind in 'SU':
+               xsum.replace_column(col.name, col.astype('object'))
+
+    # Assume that there are fewer lines to update than there are in
+    # the obsum file
 
     i=0
-    while i<len(lines):
-        line=lines[i].split()
+    while i<len(good):
         j=0
-        while j<len(good):
-            if line[0]==good[j]:
-                lines[i]=data[j]
-                print(lines[i].strip())
+        while j<len(xsum):
+            if good[i]==xsum['Dataset'][j]:
                 break
-            j=j+1
-        i=i+1
-    
+            j+=1
+        if j<len(xsum): # Then we have to parse the ith datasrig and insert it
+            words=data[i].split()
+            if len(words)<6:
+                print('Error: fixup_sum: not enough words: %s' % data[i])
+                pass
+            xsum['Proc-Date'][j]=words[3]
+            xsum['Proc-Time'][j]=words[4]
+            xsum['ProcStat'][j] =words[5]
+            if len(words)>11:
+                xsum['E0.10'][j]=eval(words[6])
+                xsum['E0.03'][j]=eval(words[7])
+                xsum['E0.01'][j]=eval(words[8])
+                xsum['I0.10'][j]=eval(words[9])
+                xsum['I0.03'][j]=eval(words[10])
+                xsum['I0.01'][j]=eval(words[11])
+            if len(words)>12:
+                xsum['PerHTML'][j]=words[12]
 
-    g=open_file('tmp.sum')
-    for one in lines:
-        g.write(one)
-
-
+        i+=1
 
 
     backup(summary_file)
-    proc=subprocess.Popen('mv %s %s' % ('tmp.sum',summary_file),shell=True,stdout=subprocess.PIPE)
+    xsum.write(summary_file,format='ascii.fixed_width_two_line')
 
     return
 

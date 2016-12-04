@@ -98,7 +98,7 @@ def iso2mjd(iso='2009-10-23 04:00:32'):
 	time_zero=time.gmtime(0.0)  # Get epoch 0
 
 	if time_zero[0] != 1970:
-		print 'Error iso2mjd - Epoch is not 1970'
+		print('Error iso2mjd - Epoch is not 1970')
 	# MJD of 1970.0
 
 
@@ -149,7 +149,7 @@ def test():
 
 	iso='2009-10-21 06:27:44'
 
-	print 'Forward'
+	print('Forward')
 
 	mjd=iso2mjd(iso)
 
@@ -157,14 +157,14 @@ def test():
 
 	xiso=mjd2iso(mjd)
 
-	print '%s --> %6.2f --> %s' % (iso,mjd,xiso)
+	print('%s --> %6.2f --> %s' % (iso,mjd,xiso))
 
-	print 'Reverse'
+	print('Reverse')
 	mjd=5.512526e4
 
 	iso=mjd2iso(mjd)
 
 	xmjd=iso2mjd(iso)
 
-	print '%6.2f --> %s --> %6.2f' % (mjd,iso,xmjd)
+	print('%6.2f --> %s --> %6.2f' % (mjd,iso,xmjd))
 
