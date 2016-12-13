@@ -1110,9 +1110,9 @@ def steer(argv):
     Notes:
     The switches are discussed in the documentation section at the tope
 
-    100907    ksl    Added to begin to automate the subtraction process
-    140617    ksl    Added new switches to account for the purely observational
-            alpha gamma models.
+    100907  ksl Added to begin to automate the subtraction process
+    140617  ksl Added new switches to account for the purely observational
+                alpha gamma models.
     '''
     i=1
     dataset_list='none'
