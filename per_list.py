@@ -914,66 +914,6 @@ def check_sum_file(new='tmp.sum',old='none'):
         g.write('%s\n' % string)
         print('# check_sum_file: The check for missing records took %s s' % delta_t)
 
-
-
-
-
-
-
-    # xstart=time.time()
-    # names=[]
-    # dups=0
-    # for line in lines:
-    #     x=line.strip()
-    #     word=x.split()
-    #     j=0
-    #     while j<len(names):
-    #         name=names[j]
-    #         if word[0]==name:
-    #             g.write('%5d %s' % (j,line))
-    #             dups=dups+1
-    #             break
-    #         j=j+1
-    #     if j==len(names):
-    #         names.append(word[0])
-#     
-    # string='# Check of %s revealed %d duplicates' % (new,dups)
-    # print string
-    # g.write('%s\n' % string)
-    # delta_t=time.time()-xstart
-    # print '# check_sum_file: The check for duplicates took %s s' % delta_t
-
-
-    # if old!='none':
-    #     xstart=time.time()
-    #
-    #    try:
-    #        f=open(old,'r')
-    #        old_lines=f.readlines()
-    #        f.close()
-    #    except IOError:
-    #        old_lines=[]
-#
-    #    nlost=0
-    #    for one in old_lines:
-    #        x=one.strip()
-    #        word=x.split()
-    #        j=0
-    #        while j<len(names):
-    #            name=names[j]
-    #            if word[0]==name:
-    #                break   # Then we have a match
-    #            j=j+1
-    #        if j==len(names): # There was no match
-    #            print 'Lost record:',x
-    #            g.write('%5d %s' % (j,one))
-    #            nlost=nlost+1
-#
-    #    string='# Check of %s revealed %d lost records' % (old,nlost)
-    #    print string
-    #    g.write('%s\n' % string)
-    #    print '# check_sum_file: The check for missing records took %s s' % delta_t
-
     g.close()
 
 
