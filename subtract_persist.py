@@ -734,7 +734,7 @@ def do_dataset(dataset='ia21h2e9q',model_type=0,norm=0.3,alpha=0.2,gamma=0.8,e_f
     if len(records)==0:
         string = 'NOK: subtract_persist.do_dataset :There are no records associated with dataset %s.  Check name in %s.ls' % (dataset,fileroot)
         sum_string='NOK - No record associated with this dataset'
-        per_list.update_summary(dataset,'ERROR',sum_string,append='no')
+        per_list.update_summary(dataset,'ERROR',[],[],reinit='no')
         return string
 
     # So now we have the list that we need.
@@ -791,7 +791,7 @@ def do_dataset(dataset='ia21h2e9q',model_type=0,norm=0.3,alpha=0.2,gamma=0.8,e_f
         print(string)
         history.close()
         xstring='  %6.2f %6.2f %6.2f %6.2f %6.2f %6.2f' % (0,0,0,0,0,0)
-        per_list.update_summary(dataset,'Persist',xstring,append='no')
+        per_list.update_summary(dataset,'Persist',['E0.10','E0.03','E0.01','I0.10','I0.03','I0.01'],[0,0,0,0,0,0])
         return string
 
 
@@ -956,20 +956,21 @@ def do_dataset(dataset='ia21h2e9q',model_type=0,norm=0.3,alpha=0.2,gamma=0.8,e_f
 
     if len(ext_values)>0:
 
-        f1=ext_values[1]*100./ext_values[0]
-        f2=ext_values[2]*100./ext_values[0]
-        f3=ext_values[3]*100./ext_values[0]
-        emeasure='%6.2f %6.2f %6.2f' % (f1,f2,f3)
+        e1=ext_values[1]*100./ext_values[0]
+        e2=ext_values[2]*100./ext_values[0]
+        e3=ext_values[3]*100./ext_values[0]
+        emeasure='%6.2f %6.2f %6.2f' % (e1,e2,e3)
 
         history.write('\nsubtract_persist: Estimate of persistence from earlier visits\n')
         history.write('subtract_persist:   The maximum value for persistence is %f\n'   % ext_values[4])
         history.write('subtract_persist:    The median value for persistence is %f\n'   % ext_values[5])
         history.write('subtract_persist: 90 percent of persist values less than %f\n'   % ext_values[6]) 
         history.write('subtract_persist: 99 percent of persist values less than %f\n'   % ext_values[7]) 
-        history.write('subtract_persist: %7d pixels (or %6.3f percent) greater than 0.10 e/s\n' % (ext_values[1],f1))
-        history.write('subtract_persist: %7d pixels (or %6.3f percent) greater than 0.03 e/s\n' % (ext_values[2],f2))
-        history.write('subtract_persist: %7d pixels (or %6.3f percent) greater than 0.01 e/s\n' % (ext_values[3],f3))
+        history.write('subtract_persist: %7d pixels (or %6.3f percent) greater than 0.10 e/s\n' % (ext_values[1],e1))
+        history.write('subtract_persist: %7d pixels (or %6.3f percent) greater than 0.03 e/s\n' % (ext_values[2],e2))
+        history.write('subtract_persist: %7d pixels (or %6.3f percent) greater than 0.01 e/s\n' % (ext_values[3],e3))
     else:
+        e1=e2=e3=0
         emeasure='%6.2f %6.2f %6.2f' % (0 ,0,0)
         history.write('\nsubtract_persist: This exposure has no persistence from earlier visits.  All persistence is self-induced\n')
 
@@ -1095,9 +1096,9 @@ def do_dataset(dataset='ia21h2e9q',model_type=0,norm=0.3,alpha=0.2,gamma=0.8,e_f
     history.write('# Finished Persistence processing of file %s\n' % science_record[1])
     history.close()
 
-    # Upadete the summary file
+    # Updete the summary file
     string='%20s %20s' % (emeasure,measure)
-    per_list.update_summary(dataset,'Persist',string,fileroot,append='no')
+    per_list.update_summary(dataset,'Persist',['E0.10','E0.03','E0.01','I0.10','I0.03','I0.01'],[e1,e2,e3,f1,f2,f3],fileroot,'no')
 
     return string
 

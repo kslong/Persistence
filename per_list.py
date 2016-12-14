@@ -521,45 +521,33 @@ def check4scan(filename='./Visit43/ic9t43j1q_flt.fits[1]'):
 
 
 
-def update_summary(dataset,status_word='Unknown',results='Whatever you want',fileroot='observations',append='yes'):
+def update_summary(dataset,status_word,keys=[],values=[],fileroot='observations',reinit='yes'):
     '''
     Update a record in the summary file, where the inputs have the following meaning
     
-    dataset        rootname of the file, usually the flt file, being processed
-    status_word    one word, e.g. Complete or Error, to define the current status of the processing
-    results        A string which can be appended to the current set of results or which can replace it
-    fileroot    The rootname of the summarry file, almost always obsevations
-    append        if 'yes', then append the new results to the old, else replace the old results with the
-            new
+    dataset         rootname of the file, usually the flt file, being processed
+    status_word     one word, e.g. Complete or Error, to define the current status of the processing
+    keys            the database values that we want to update, e.g PerHtml
+    values          A list of the values we want to put into the output table
+    fileroot        The rootname of the summarry file, almost always obsevations
+    reinit          if 'yes', then reinitialize to a default state the fields that new values have not been
+                    included in the file
 
 
     Notes:
 
-    Aside from the dataset name everything is free format in terms of results
+    This routine does not actually update the summary file, and so its name is a misnomer. It
+    just records the information need for the update into small tables in temp_sum.  This is all
+    set up this way to allow parallel processing. A new routine fixup_summary_file
+    below now inserts the results into the data. 
 
 
-    It is not really obvious that appending to a line is the best approach.  If I werre writing this
-    today, I might opt for a fixed format from the beginning, but this is part of a larger question
-    of whether one should use astropy. tables, or some kind of database system - ksl - 151006
-
-    Before 1601 this routine modified the observation.sum file directly, but now it just records the
-    information needed to update the summary file in a directory tmp_sum.  This change was to prevent
-    multiple processing writing to the summary file at the same file.  A new routine fixup_summary_file
-    below now inserts the results into the data.  
-
+    History:
 
     101221  ksl Coded as part of effort to get a way to check what files
                 had been processed with the persistence software
-    110103  ksl Added a better way to keep enough summary files that one
-                might be able to roll back
-    110117  ksl Dealt with the situation where there were not old_results
-    110721  ksl Improved the description of the routine
-    151006  ksl Fixed Error #553, which arose because the routine assumes one
-                often wants to append to a summary line.  Because we use index
-                to find where in the line we want to start replacing data, one
-                needs to be careful that there is no possibility that one is
-                indexing to the wrong position.
     160105  ksl Modified for multiprocessing
+    161212  ksl Recoded to use astropy tables
 
     '''
 
@@ -567,30 +555,26 @@ def update_summary(dataset,status_word='Unknown',results='Whatever you want',fil
     if os.path.isdir('tmp_sum')==False:
         os.mkdir('tmp_sum')
 
-    summary_file=fileroot+'.sum.ls'
+    summary_file=fileroot+'.sum'
     gmt=time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime())
 
 
     try:
-        # f=open(summary_file,'r')
-        # lines=f.readlines()
-        # f.close()
         lines=read_table(summary_file)
     except IOError:
         print('Error: update_summary: File %s does not exist' % summary_file)
         return
 
 
-    # this opens the files for writing and sets the permissions
+    # Read the old data from tmp_sum if it exists, or failing that take the
+    # results from the old obs_sum file
     xfile='tmp_sum/%s.txt' % dataset
     if os.path.isfile(xfile)==True:
-        gg=open(xfile,'r')
-        old_results=gg.readline()
-        gg.close()
+        old_results=read_table(xfile)
     else:
         i=0
         while i <len(lines):
-            line=lines[i].split()
+            line=lines[i]
             if line['Dataset']==dataset:
                 old_results=lines[i]
                 break
@@ -598,23 +582,22 @@ def update_summary(dataset,status_word='Unknown',results='Whatever you want',fil
     
     # OK at this point I have the old results
 
-    results=results.strip()
+    old_results['ProcStat']=status_word
 
-    old_results=old_results.strip()
-    line=old_results.split()
+    i=0
+    while i<len(keys):
+        if keys[i] in set(old_results.colnames):
+            old_results[keys[i]]=values[i]
+        else:
+            print ('Error: Update_summary: key %s not found' % keys[i])
+        i+=1
 
-    if len(line)>6:
-        k=old_results.index(line[5])+len(line[5])
-        old_results=old_results[k:len(old_results)] # This should be the bits that were append previously
-        old_results=old_results.strip()
 
-    if append=='yes' and len(old_results)>0:
-        results='%s %s' % (old_results,results)
-    string='%-10s %5s %20s  %20s %-20s %s' % (line[0],line[1],line[2],gmt,status_word,results)
+    # At present this is a row of and old table and so we need to convert to a Table
+    # in order to be able to write it out
 
-    gg=open_file('tmp_sum/%s.txt' % dataset)
-    gg.write('%s\n' % string)
-    gg.close()
+    old_results=Table(old_results)
+    old_results.write('tmp_sum/%s.txt' % dataset,format='ascii.fixed_width_two_line')
 
     return
 
@@ -638,72 +621,49 @@ def  fixup_summary_file(datasets,fileroot='observations'):
     History:
 
     160105  ksl Coded as part of the effort to add multiprocessing
-    161204  ksl Update to handle tables. This is still a bit of a kluge
-                because the files writen out by update_sum are free format.
-                This should be fixed.
+    161204  ksl Update to handle tables.
+
     '''
 
 
     # Get the data
-    good=[]
     data=[]
     for dataset in datasets:
         try:
             xname='tmp_sum/%s.txt' % dataset
-            f=open(xname,'r')
-            line=f.readline()
-            data.append(line)
-            good.append(dataset)
+            xdata=read_table(xname)
+            if len(data)==0:
+                data=xdata
+            else:
+                data=vstack([data,xdata])
         except IOError:
             print('Error: fixup_summary_file: %s does not appear to exist' % xname)
     
-    # OK at this point we have found all of the good files
 
 
     gmt=time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime())
 
+    # Now read the old observations.sum file
     summary_file=fileroot+'.sum'
     try:
-        # xsum=ascii.read(summary_file,format='fixed_width_two_line')
         xsum=read_table(summary_file,format='fixed_width_two_line')
     except  IOError:
         print('Error: update_summary : Could not read summary file %s ' % summary_file)
         return
 
 
-    # Fixup table so strings will not be truncated
-    for col in xsum.itercols():
-        if col.dtype.kind in 'SU':
-               xsum.replace_column(col.name, col.astype('object'))
-
     # Assume that there are fewer lines to update than there are in
-    # the obsum file
+    # the obsum file  (xsum is the old summary file)
 
     i=0
-    while i<len(good):
+    while i<len(data):
         j=0
         while j<len(xsum):
-            if good[i]==xsum['Dataset'][j]:
+            if data['Dataset'][i]==xsum['Dataset'][j]:
                 break
             j+=1
         if j<len(xsum): # Then we have to parse the ith datasrig and insert it
-            words=data[i].split()
-            if len(words)<6:
-                print('Error: fixup_sum: not enough words: %s' % data[i])
-                pass
-            xsum['Proc-Date'][j]=words[3]
-            xsum['Proc-Time'][j]=words[4]
-            xsum['ProcStat'][j] =words[5]
-            if len(words)>11:
-                xsum['E0.10'][j]=eval(words[6])
-                xsum['E0.03'][j]=eval(words[7])
-                xsum['E0.01'][j]=eval(words[8])
-                xsum['I0.10'][j]=eval(words[9])
-                xsum['I0.03'][j]=eval(words[10])
-                xsum['I0.01'][j]=eval(words[11])
-            if len(words)>12:
-                xsum['PerHTML'][j]=words[12]
-
+            xsum[j]=data[i]
         i+=1
 
 
@@ -711,13 +671,6 @@ def  fixup_summary_file(datasets,fileroot='observations'):
     xsum.write(summary_file,format='ascii.fixed_width_two_line')
 
     return
-
-
-
-
-
-    
-
 
 
 

@@ -252,7 +252,7 @@ def do_dataset(dataset='ia21h2e9q',model_type=1,norm=0.3,alpha=0.2,gamma=0.8,e_f
     words=string.split()
 
     # Now update the summary file
-    per_list.update_summary(dataset,'Complete_%s'% VERSION,words[2])
+    per_list.update_summary(dataset,'Complete_%s'% VERSION,keys=['PerHTML'],values=[words[2]])
 
 
     cur_time=date.get_gmt()
@@ -399,9 +399,7 @@ def steer(argv):
 
     # Check that the listfile actually exists, and if not exit with a stern warning
 
-    # XXX - Restore
-    # listfile=fileroot+'.ls'
-    listfile=fileroot+'.txt'
+    listfile=fileroot+'.ls'
     if os.path.exists(listfile)==False:
         print('Error: run_persist.steer - No %s file in run directory.  EXITING!!!' % listfile)
         return
