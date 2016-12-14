@@ -56,30 +56,11 @@ Primary routines:
 
 Notes:
 
-History:
+History (Recent):
 
-091026 ksl    Coding begun
-091215 ksl    Updated to prevent reading UVIS data and put in an option to only
-        look at full arrays
-1006    ksl    Split out from other routines so this routine could be used as
-        a library of routines for dealing with ascii lists
-100608    ksl    Added the ability to create lists from the command line by running 
-        per_list.py
-100906    ksl    Added what amounts to a standalone utility find_latest to locate
-        the last version of a file in any subdirectory if there is no
-        such file in the current directory.  This is here in this file
-        becasue per_list.py contains all the file locating routines
-        not because it is really part of the rest of per_list
-110103    ksl    Modified various portions of the way with which summary files are
-        handled and introduced a steering routine as the input options
-        became more complicated.
-120330    ksl    Modified the help so that it reflects how the routine actually 
-        works
-130909 ksl    Standardized error printouts
-150317    ksl    Remove iraf/pyraf from per_list
-151022    ksl    Restored iraf/pyraf for performance reasons
-160104    ksl    Changes to lock and unlock files so that parallel processing
-        will not corrupt the obervations.sum file
+091026  ksl Coding begun
+160104  ksl Changes to lock and unlock files so that parallel processing
+            will not corrupt the obervations.sum file
 161130  ksl Remove pyraf dependencies because it is going away.
 161204  ksl Updated for python3, and to use astropy tables
 
@@ -100,9 +81,48 @@ from astropy.io import ascii
 from multiprocessing import Pool
 from astropy.table import Table
 from astropy.table import join
+from astropy.table import vstack
 
 
 # Utilities
+
+def read_table(filename='foo.txt',format=''):
+    '''
+    Read a file using astropy.io.ascii and 
+    return this 
+
+    Description:
+
+        This simply reads a table, but it also
+        assures that strings have been converted
+        to objects.  This can be important if one
+        intends to add or manipulate strings, 
+        because astropy tends to truncate such
+        objects
+
+    Notes:
+
+    History:
+
+    161214  ksl Added in order to handle potential isssues
+        with string truncation
+
+    '''
+    try:
+        if format=='':
+            data=ascii.read(filename)
+        else:
+            data=ascii.read(filename,format=format)
+        for col in data.itercols():
+            if col.dtype.kind in 'SU':
+                data.replace_column(col.name,col.astype('object'))
+    except IOError:
+        print ('Error: file %s does not appear to exist' % filename)
+        raise IOError
+        return
+
+    return data
+
 def backup(filename,tformat='%y%m%d',force='no'):
     '''
     Backup a file with a standard way of naming the file.  
@@ -278,7 +298,6 @@ def set_path(name,mkdirs='yes',local='no'):
         elif figs.count('Quicklook'):
             os.chown(figs,-1,340)
 
-    # print 'set_path',figs,os.path.exists(figs)
     
     return path
 
@@ -351,22 +370,18 @@ def check4duplicates(records):
     160127  Modified again to speed this up (when there are large numbers of files
         to examine.  If there are no duplicates this is quite quick.  Even
         when there are duplicates this is about 3x faster than the old method.
+    161208  Modify so uses tables
     '''
 
 
     xstart=time.time()
 
-    ok=[]
-    names=[]
-    for record in records:
-        ok.append('ok')
-        names.append(record[1])
-    
-    unique=set(names)
-    if len(unique)==len(names):
+    unique=set(records['Dataset'])
+    if len(unique)==len(records):
         print('check4duplicates: There are no duplicates in the directory structure')
-        return ok
+        return records
     else:
+        names=records['Dataset']
         duplicate_names=[]
         print('check4duplicates: Warning: There are %d duplicate datasets in the directory structure' % (len(names)-len(unique)))
         for one in unique:
@@ -383,7 +398,7 @@ def check4duplicates(records):
                     j=j+1
                 times=[]
                 for one in hold:
-                    times.append(records[one][17])
+                    times.append(records['File-date][one'])
 
                 times=numpy.array(times)
                 order=numpy.argsort(times) # Give me the order of the times
@@ -391,15 +406,13 @@ def check4duplicates(records):
 
                 k=0
                 while k<len(hold):
-                    if k==last:
-                        ok[hold[k]]='ok'
-                    else:
-                        ok[hold[k]]='nok'
+                    if k!=last:
+                        record['File'][k]='#%s' % record['File'][k]
                     k=k+1
 
     print('Check for duplicates in direcory structure took:',time.time()-xstart)
 
-    return ok
+    return records
     
 
 
@@ -431,7 +444,6 @@ def find_latest(filename='foo'):
     '''
 
     proc=subprocess.Popen('find . -follow -name %s -print ' % filename,shell=True,stdout=subprocess.PIPE)
-    # Before
     lines=proc.stdout.readlines()
     if len(lines)==0:
             'Warning: find_best: No versions of %s found' % filename
@@ -555,15 +567,15 @@ def update_summary(dataset,status_word='Unknown',results='Whatever you want',fil
     if os.path.isdir('tmp_sum')==False:
         os.mkdir('tmp_sum')
 
-    # XXX - This works but we are not using tables here
-    summary_file=fileroot+'.sum.txt'
+    summary_file=fileroot+'.sum.ls'
     gmt=time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime())
 
 
     try:
-        f=open(summary_file,'r')
-        lines=f.readlines()
-        f.close()
+        # f=open(summary_file,'r')
+        # lines=f.readlines()
+        # f.close()
+        lines=read_table(summary_file)
     except IOError:
         print('Error: update_summary: File %s does not exist' % summary_file)
         return
@@ -579,7 +591,7 @@ def update_summary(dataset,status_word='Unknown',results='Whatever you want',fil
         i=0
         while i <len(lines):
             line=lines[i].split()
-            if line[0]==dataset:
+            if line['Dataset']==dataset:
                 old_results=lines[i]
                 break
             i=i+1
@@ -650,13 +662,14 @@ def  fixup_summary_file(datasets,fileroot='observations'):
 
     gmt=time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime())
 
-    # XXX replace with correct name
-    summary_file=fileroot+'.sum.txt'
+    summary_file=fileroot+'.sum'
     try:
-        xsum=ascii.read(summary_file)
+        # xsum=ascii.read(summary_file,format='fixed_width_two_line')
+        xsum=read_table(summary_file,format='fixed_width_two_line')
     except  IOError:
         print('Error: update_summary : Could not read summary file %s ' % summary_file)
         return
+
 
     # Fixup table so strings will not be truncated
     for col in xsum.itercols():
@@ -741,7 +754,7 @@ def make_sum_file(fileroot='observations',new='no'):
     proc_date=words[0]
     proc_time=words[1]
 
-    summary_file=fileroot+'.sum.txt'
+    summary_file=fileroot+'.sum'
 
 
     # Create pristine file
@@ -766,9 +779,7 @@ def make_sum_file(fileroot='observations',new='no'):
         if col.dtype.kind in 'SU':
                g.replace_column(col.name, col.astype('object'))
 
-    print('fix',g)
 
-    print('format',g['PerHTML'].format)
 
 
     if os.path.exists(summary_file)==False or new=='yes':
@@ -778,9 +789,14 @@ def make_sum_file(fileroot='observations',new='no'):
     else:
         print('# Merging new records into old list')
         try:
-            xsum=ascii.read(summary_file)
-        except  IOError:
+            # xsum=ascii.read(summary_file)
+            xsum=read_table(summary_file,format='fixed_width_two_line')
+            if 'ProcStat' in xsum.colnames == False:
+                print ('Error: make_summary_file: %s read but does not have correct table format' % summary_file)
+                return
+        except:
             print('Error: make_sum_file: Could not read summary file %s ' % summary_file)
+            return
 
 
 
@@ -923,7 +939,7 @@ def check_sum_file(new='tmp.sum',old='none'):
 
 
 
-def get_info(lines,apertures,filetype):
+def get_info(lines,filetype):
     '''
     Get all of the keyword information for a set of files and return this
 
@@ -947,63 +963,101 @@ def get_info(lines,apertures,filetype):
         print('There are %d datasets to process' % len(lines))
 
     i=0
-    for line in lines:
+    filename=[]
+    dataset=[]
+    propid=[]
+    line_no=[]
+    instrument=[]
+    detector=[]
+    expstart=[]
+    date_obs=[]
+    time_obs=[]
+    aperture=[]
+    xfilter=[]
+    exptime=[]
+    ra=[]
+    dec=[]
+    target=[]
+    assn=[]
+    investigator=[]
+    file_create=[]
+    file_mod=[]
 
-        line=line.strip()
-        line=line.split()
 
-        # 100807 Added date of file creation so could handle non-unique data sets
-        # This is the old version using pyraf, which has been put back for perfomance reasons
-#        xfile='%s[1]' % line[0]
-#        if pyraf.iraf.imaccess(xfile):
-#            x=pyraf.iraf.hselect(xfile,'$I,rootname,proposid,linenum, instrume,detector,expstart,date-obs,time-obs,aperture,filter,exptime,crval1,crval2,targname,asn_id,pr_inv_L,date','yes',Stdout=1)
-#            x=x[0].split('\t')
-#            # Kluge for raw data files which have two ROOTNAME keywords for unknown reasons
-#            if x[1]==x[2]:
-#                x.pop(2)
-#
-#            x[16].replace(' ','-')  # Get rid of spaces in PI names
-#            if len(x[16])==0:
-#                x[16]='Unkown'
-#            # Another kludge for raw files.  The is no 'date' field in the first extension as there is for flt and ima files, but DATE does exist in extension 0
-#            if filetype=='raw':
-#                xname=per_fits.parse_fitsname(xfile,0,'yes')
-#                xx=pyraf.iraf.hselect(xname[2],'$I,DATE','yes',Stdout=1)
-#                xx=xx[0].split('\t')
-#                x.append(xx[1])
-#            x[0]=line[0]
+    for one in lines:
 
-        # Replaced upcoming lines with iraf/pyraf for performance reasons
-        # 161130 - Returned to using astropy as iraf is disappering
-        xfile=line[0]
+        xfile=one['File']
+
         if os.path.isfile(xfile) == True:
             x=per_fits.get_keyword(xfile,1,'rootname,proposid,linenum, instrume,detector,expstart,date-obs,time-obs,aperture,filter,exptime,crval1,crval2,targname,asn_id,pr_inv_L')
-            x=[xfile]+x
-
+            if x[4]=='IR':
             # for raw files the date is in extension 0, but for the others it is in 1.
-            if filetype=='raw':
-                date=per_fits.get_keyword(xfile,0,'date')
-            else:
-                date=per_fits.get_keyword(xfile,1,'date')
-            x.append(date[0])
-
-
-
-            scan=check4scan(xfile)
-
-            if x[5]=='IR':
+                if filetype=='raw':
+                    date=per_fits.get_keyword(xfile,0,'date')
+                else:
+                    date=per_fits.get_keyword(xfile,1,'date')
+            # Check for scan returns scan,stare, or unkown
+                scan=check4scan(xfile)
                 x[4]=scan
-                j=x[9].count('SUB')
-                if j == 0 or apertures != 'full':
-                    records.append(x)
-                    times.append(float(x[6]))
+
+                filename.append(xfile)
+                dataset.append(x[0])
+                propid.append(x[1])
+                line_no.append(x[2])
+                instrument.append(x[3])
+
+
+                detector.append(x[4])
+                expstart.append(x[5])
+                date_obs.append(x[6])
+                time_obs.append(x[7])
+
+
+                aperture.append(x[8])
+                xfilter.append(x[9])
+                exptime.append(x[10])
+                ra.append(x[11])
+                dec.append(x[12])
+                target.append(x[13])
+                assn.append(x[14])
+                investigator.append(x[15])
+
+                file_create.append(date[0])
+                file_mod.append(one['Mod-time'])
+
+
         else: 
             print('File %s does not really exist' %  xfile)
         i=i+1
         if i%100 == 1:
             print('Inspected %6d of %6d datasets --> %6d IR datasets' % (i,len(lines),len(records)))
+
+    # Now put the results back into a table
     print('Inspected %6d of %6d datasets --> %6d IR datasets' % (i,len(lines),len(records)))
-    return times,records
+
+    x=Table()
+    x['File']=filename
+    x['Dataset']=dataset
+    x['ProgID']=propid
+    x['LineNo']=line_no
+    x['Inst']=instrument
+    x['Det']=detector
+    x['ExpStart']=expstart
+    x['Date-Obs']=date_obs
+    x['Time-Obs']=time_obs
+    x['Aper']=aperture
+    x['Filter']=xfilter
+    x['Exptime']=exptime
+    x['RA']=ra
+    x['Dec']=dec
+    x['Target']=target
+    x['Assoc']=assn
+    x['PI']=investigator
+    x['File-date']=file_create
+    x['Mod-time']=file_mod
+
+
+    return x
 
 
 def info_helper(args):
@@ -1020,7 +1074,7 @@ def info_helper(args):
 
 
 
-def make_ordered_list(fileroot='observations',apertures='full',filetype='flt',new='no',np=1):
+def make_ordered_list(fileroot='observations',filetype='flt',use_old='yes',np=1):
     '''
     find all of the observations in all subdiretories and make
     a time ordered list of the observations from files of a
@@ -1032,7 +1086,6 @@ def make_ordered_list(fileroot='observations',apertures='full',filetype='flt',ne
     Note - This could be done as a true database, but it's 
     simpler for now just to make it a file
 
-    This routine still uses iraf.hselect
 
     100308 - Added option to deal with other types of files aside from flt files.  The 
         assumption made is that the filetype is part of the filename
@@ -1071,35 +1124,94 @@ def make_ordered_list(fileroot='observations',apertures='full',filetype='flt',ne
     print('# Found all of the files to read in %f s' % dtime)
     xstart=time.time()
 
+    # lines=ascii.read('files.ls',format='no_header')
+    lines=read_table('files.ls',format='no_header')
+    lines.rename_column('col1','File')
 
-    f=open('files.ls','r')
-    lines=f.readlines()
-    f.close()
+    # Get the MOdification date for all of the files
+    mod_date=[]
+    for one in lines:
+        x=os.path.getmtime(one['File'])
+        mod_date.append(time.strftime('%Y-%b-%d-%H:%M:%S', time.gmtime(x)))
+    lines['Mod-time']=mod_date
 
-    if np<=1 or len(lines)<np:
-        times,records=get_info(lines,apertures,filetype)
+    old_lines=[] # This just sets up defaults
+    new_lines=lines
+
+    if use_old=='yes':
+        try:
+            # obs_old=ascii.read(fileroot+'.ls')
+            obs_old=read_table(fileroot+'.ls')
+            # Next couple of lines can be deleted once fully transitioned to new version
+            # of per_list
+            xset=set(obs_old.colnames)
+            if 'ModDate' in xset == False:
+                use_old='no'
+        except IOError:
+            use_old='no'
+
+
+    if use_old=='yes':
+        xjoin=join(lines,obs_old,keys=['File'],join_type='left')
+        old=[]
+        new=[]
+        i=0
+        while i<len(xjoin):
+            one=xjoin[i]
+            if one['Mod-time_1']==one['Mod-time_2']:
+                old.append(i)
+            else:
+                new.append(i)
+            i+=1
+        if len(old)>0:
+            old_lines=xjoin[old]
+            old_lines.rename_column('Mod-time_2','Mod-time')
+            old_lines.remove_column('Mod-time_1')
+        if len(new)>0:
+            new_lines=lines[new]
+        else:
+            new_lines=[]
+
+    #  At this point we know which files need to be read
+    #  Note that an explicit assumption here is that the spt files have not changed
+    #  Ignore this for now
+
+    print('Of %d files, %d are old, and %d are new' % (len(lines),len(old_lines),len(new_lines)))
+
+
+    if len(new_lines)==0:
+        pass
+    elif np<=1 or len(lines)<np:
+        records=get_info(new_lines,filetype)
     else:
         inputs=[]
-        idelta=len(lines)/np +1
+        idelta=len(new_lines)/np +1
         i=0
-        while i < len(lines):
+        while i < len(new_lines):
             imin=i
             imax=i+idelta
-            if imax>len(lines):
-                imax=len(lines)
+            if imax>len(new_lines):
+                imax=len(new_lines)
             xinputs=lines[imin:imax]
-            inputs.append([xinputs,apertures,filetype])
+            inputs.append([xinputs,filetype])
             i=i+idelta
 
 
         p=Pool(np)  
 
-        times=[]
-        records=[]
+        i=0
         for one in p.map(info_helper,inputs):
-            times=times+one[0]
-            records=records+one[1]
+            if i==0:
+                records=one
+            else:
+                records=vstack([records,one])
+            i+=1
     
+    # At this point, records contains all of the new_records
+    if len(old_lines)>0 and len(new_lines)>0:
+        records=vstack([old_lines,records])
+    elif len(old_lines)>0:
+        records=old_lines
 
     # print 'times',len(times)
     # print 'records',len(records)
@@ -1108,158 +1220,29 @@ def make_ordered_list(fileroot='observations',apertures='full',filetype='flt',ne
     print('Inspected all of the files in %f s' % dtime)
     
 
-    if len(times)==0:
+    if len(records)==0:
         print('There were no IR observations to consider')
         return []
     # Now sort this all on the time
     # This returns an index of the order of the lines
-    xstart=time.time()
-    order=numpy.argsort(times)
-    sort_time=dtime=time.time()-xstart
-    print('# Time to sort the records %s s' % dtime)
 
-    lastime=float(records[len(order)-1][6])
+    records.sort('ExpStart')
+
+    records=check4duplicates(records)
+
+    records.write(fileroot+'.ls',format='ascii.fixed_width_two_line')
     
-    time_sorted=[]
-    for index in order:
-        time_sorted.append(records[index])
-
-    # Now check for uniqueness files
-
 
 
     # Now write the time sorted file
-    xstart=time.time()
-    write_ordered_list(fileroot,time_sorted)
     write_time=time.time()-xstart
     print('# Time to write the .ls file  %s s' % write_time)
 
     print('# Completed creating %s.ls' % (fileroot))
 
-    print('# make_ordered_list: times',search_time,key_time,sort_time,write_time)
+    print('# make_ordered_list: times',search_time,key_time,write_time)
 
-    return time_sorted
-    
-def write_ordered_list(fileroot='observations',records=[]):
-    '''
-    Write the ordered_list file from a set of records
-
-    110104    ksl    Split from make_ordered list in order to ease the creation of sublists
-    161202  ksl Write the results as an astropy table
-    '''
-
-
-    f=open_file(fileroot+'.ls')
-
-    # Note that the duplication check here is awkward, but we want to
-    # keep track of duplicate records in the output file
-    ok=check4duplicates(records)
-
-    # Now write out each record one by one
-    filenames=[]
-    dataset=[]
-    propid=[]
-    line_no=[]
-    instrument=[]
-    detector=[]
-    expstart=[]
-    date_obs=[]
-    time_obs=[]
-    aperture=[]
-    xfilter=[]
-    exptime=[]
-    ra=[]
-    dec=[]
-    target=[]
-    assn=[]
-    investigator=[]
-    file_create=[]
-    i=0
-    while i<len(records):
-        record=records[i]
-        if ok[i]=='ok':
-            xstring='%-50s ' % record[0]  # File name
-        else:
-            xstring='# %-48s ' % record[0]  # File name
-
-        xstring=xstring+'%-5s ' % record[1]  # dataset name
-        xstring=xstring+'%-5s ' % record[2]  # Propid
-        xstring=xstring+'%-5s ' % record[3]  # Lineno
-        xstring=xstring+'%-5s ' % record[4]  # Intrum
-        xstring=xstring+'%-5s ' % record[5]  # detector
-        xstring=xstring+'%14.7f ' % record[6]  # expstart
-        xstring=xstring+'%-5s ' % record[7]  # date-obs
-        xstring=xstring+'%-5s ' % record[8]  # time-obs
-        xstring=xstring+'%-5s ' % record[9]  # aperture
-        xstring=xstring+'%-5s ' % record[10] # filter 
-        xstring=xstring+'%7.1f ' % record[11] # exptime
-        xstring=xstring+'%10.6f ' % record[12] # crval1 
-        xstring=xstring+'%10.6f ' % record[13] # crval2  
-        xstring=xstring+'%-5s ' % record[14] # targname
-        xstring=xstring+'%-5s ' % record[15] # Assn_id 
-        xstring=xstring+'%-5s ' % record[16] # PI      
-        xstring=xstring+'%-5s ' % record[17] # File creation date
-        f.write('%-5s\n' % xstring)
-
-        filenames.append(record[0])
-        dataset.append(record[1])
-        propid.append(record[2])
-        line_no.append(record[3])
-        instrument.append(record[4])
-        detector.append(record[5])
-        expstart.append(record[6])
-        date_obs.append(record[7])
-        time_obs.append(record[8])
-        aperture.append(record[9])
-        xfilter.append(record[10])
-        exptime.append(record[11])
-        ra.append(record[12])
-        dec.append(record[13])
-        target.append(record[14])
-        assn.append(record[15])
-        investigator.append(record[16])
-        file_create.append(record[17])
-
-        i=i+1
-    f.close()
-
-    x=Table([filenames],names=['File'])
-    x['Dataset']=dataset
-    x['ProgID']=propid
-    x['LineNo']=line_no
-    x['Inst']=instrument
-    x['Det']=detector
-    x['ExpStart']=expstart
-    x['Date-Obs']=date_obs
-    x['Time-Obs']=time_obs
-    x['Aper']=aperture
-    x['Filter']=xfilter
-    x['Exptime']=exptime
-    x['RA']=ra
-    x['Dec']=dec
-    x['Target']=target
-    x['Assoc']=assn
-    x['PI']=investigator
-    x['File-date']=file_create
-
-    # Remove duplicates from the output table
-
-    i=0
-    select=[]
-    while i<len(x):
-        if ok[i]=='ok':
-            select.append(i)
-        else:
-            print('Error: Duplicate: removing',x[i])
-        i+=1
-    x=x[select]
-
-
-    x.write(fileroot+'.txt',format='ascii.fixed_width_two_line')
-
-    return
-
-    
+    return records
 
 def read_ordered_list0(fileroot='observations'):
     '''
@@ -1272,9 +1255,9 @@ def read_ordered_list0(fileroot='observations'):
     '''
 
     try:
-        x=Table.read(fileroot+'.txt',format='ascii.fixed_width_two_line')
+        x=Table.read(fileroot+'.ls',format='ascii.fixed_width_two_line')
     except:
-        print('Error: read_ordered_list0: Could not open %s ' % (fileroot+'txt'))
+        print('Error: read_ordered_list0: Could not open %s ' % (fileroot+'ls'))
         return []
 
     return(x)
@@ -1293,7 +1276,7 @@ def read_ordered_list2(fileroot='observations',dataset='ibel01p4q',interval=[-1,
     # Read the entire file
 
     try:
-        x=Table.read(fileroot+'.txt',format='ascii.fixed_width_two_line')
+        x=Table.read(fileroot+'.ls',format='ascii.fixed_width_two_line')
     except:
         print('Error: read_ordered_list0: Could not open %s ' % (fileroot+'.ls'))
         return []
@@ -1338,7 +1321,7 @@ def read_ordered_list2(fileroot='observations',dataset='ibel01p4q',interval=[-1,
 
 
     if outroot!='none' and outroot != fileroot:
-        xxx.write(outroot+'.txt',format='ascii_fixed_width_two_line')
+        xxx.write(outroot+'.ls',format='ascii_fixed_width_two_line')
 
 
     return xxx 
@@ -1368,7 +1351,7 @@ def read_ordered_list(fileroot='observations',dataset='last',delta_time=24):
     # Read the entire file
 
     try:
-        x=Table.read(fileroot+'.txt',format='ascii.fixed_width_two_line')
+        x=Table.read(fileroot+'.ls',format='ascii.fixed_width_two_line')
     except:
         print('Error: read_ordered_list0: Could not open %s ' % (fileroot+'.ls'))
         return []
@@ -1419,7 +1402,7 @@ def read_ordered_list_mjd(fileroot='observations',mjd_start=0,mjd_stop=0):
     '''
 
     try:
-        x=Table.read(fileroot+'.txt',format='ascii.fixed_width_two_line')
+        x=Table.read(fileroot+'.ls',format='ascii.fixed_width_two_line')
     except:
         print('Error: read_ordered_list0: Could not open %s ' % (fileroot+'.ls'))
         return []
@@ -1460,7 +1443,7 @@ def read_ordered_list_progid(fileroot='observations',prog_id=11216,mjd_start=0,m
 
 
     try:
-        x=Table.read(fileroot+'.txt',format='ascii.fixed_width_two_line')
+        x=Table.read(fileroot+'.ls',format='ascii.fixed_width_two_line')
     except:
         print('Error: read_ordered_list0: Could not open %s ' % (fileroot+'.ls'))
         return []
@@ -1537,8 +1520,7 @@ def steer(argv):
     '''
 
     ftype='flt'
-    aperture='all'
-    new_ls_file='no'
+    use_old='yes'
     new_summary_file='no'
     root='observations'
     np=1
@@ -1550,15 +1532,15 @@ def steer(argv):
         if argv[i]=='-h':
             print(__doc__) 
             return
-        elif argv[i]=='-all':
-            new_ls_file='yes'
+        elif argv[i]=='-new_all':
+            use_old='no'
             new_summary_file='yes'
         elif argv[i]=='-new_sum':
             new_summary_file='yes'
         elif argv[i]=='-new_ls':
             new_ls_file='yes'
         elif argv[i]=='-daily':  # This is the standard switch crontab generation
-            new_ls_file='yes'
+            use_old='yes'
             new_summary_file='no'
         elif argv[i]=='-file_type':
             i=i+1
@@ -1574,10 +1556,19 @@ def steer(argv):
                 root=argv[i]
         i=i+1
 
+    if  use_old=='no':
+        print('Rebuilding the .ls file from scratch')
+    else:
+        print('Rebuilding the .ls file using information the previous .ls file')
+    if new_summary_file=='yes':
+        print('Rebulding the summary file such that information from earlier persistence processing will be "forgotten"')
+    else:
+        print('Interpolating old information about persistence processing into the new .sum file')
+
     # At this point we have fully parsed the observation list
 
     xstart=time.time()
-    make_ordered_list(root,aperture,ftype,new_ls_file,np)
+    make_ordered_list(root,ftype,use_old,np)
     dtime=time.time()-xstart
     print('# Time to make the .ls file: ',dtime)
 
