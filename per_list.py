@@ -381,7 +381,7 @@ def check4duplicates(records):
         print('check4duplicates: There are no duplicates in the directory structure')
         return records
     else:
-        names=records['Dataset']
+        names=numpy.array(records['Dataset'])
         duplicate_names=[]
         print('check4duplicates: Warning: There are %d duplicate datasets in the directory structure' % (len(names)-len(unique)))
         for one in unique:
