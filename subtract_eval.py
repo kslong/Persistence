@@ -44,6 +44,7 @@ import glob
 import pylab
 import per_list
 import per_fits
+import time
 
 def read_peaks(file_xy):
     '''
@@ -78,7 +79,7 @@ def read_peaks(file_xy):
 
 
 
-def do_dataset(dataset='ib6v19bzq',radius=50,local='no'):
+def do_dataset(dataset='ib6v19bzq',radius=50,local='yes'):
     '''
     Examine how well one has succeeded in subtracting persistence
     from a single dataset.  Assuming that all the actual sububraction
@@ -92,9 +93,17 @@ def do_dataset(dataset='ib6v19bzq',radius=50,local='no'):
     110203    ksl    Added local switch so testing would be easier
     '''
 
+    print('XXX dataset %s %f' % (dataset,radius))
+    print('XXX isinteractive',pylab.isinteractive())
+
+    xstart=time.clock()
+
     # Read information about this dataset from the observations.ls file
     # Note that the file name is hardcoded here
     record=per_list.read_ordered_list_one('observations',dataset)
+    if len(record)==0:
+        print('Error: subtract_eval: dataset %s not found in observations.ls' % dataset)
+        return 
 
 
     # Set up the path, and open the history file
@@ -189,7 +198,7 @@ def do_dataset(dataset='ib6v19bzq',radius=50,local='no'):
         per_hist.append(qper)
         qper=qper+dper
 
-
+    print('XXX subtract_eval, time to begin plots %f'%  (time.clock()-xstart))
 
     source_no=0
     for one in xy:  # Main loop for each point
@@ -236,7 +245,6 @@ def do_dataset(dataset='ib6v19bzq',radius=50,local='no'):
         pylab.imshow(xflt,origin='lower',cmap=pylab.cm.gray,vmin=zmin,vmax=zmax)
         pylab.title('Original')
         pylab.subplot(222)
-        # pylab.imshow(xper,origin='lower',cmap=pylab.cm.gray,vmin=0.0,vmax=0.1)
         pylab.imshow(xper,origin='lower',cmap=pylab.cm.gray,vmin=-0.05,vmax=0.1)
         pylab.title('Model')
         pylab.subplot(223)
@@ -363,6 +371,8 @@ def do_dataset(dataset='ib6v19bzq',radius=50,local='no'):
         all_sorig.append(sorig)
         all_scorr.append(scorr)
 
+        print('XXX subtract_eval, time to complete main loop plot  %f'%  (time.clock()-xstart))
+
         # This ends the main loop for each data point.
 
 
@@ -485,6 +495,9 @@ def do_dataset(dataset='ib6v19bzq',radius=50,local='no'):
 
     history.write('End subtract_eval for dataset %s\n' % dataset)
     history.close()
+    print('XXX subtract_eval, time to end  %f' % (time.clock()-xstart))
+
+    return
 
 
 

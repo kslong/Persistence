@@ -196,6 +196,7 @@ def do_dataset(dataset='ia21h2e9q',model_type=1,norm=0.3,alpha=0.2,gamma=0.8,e_f
 
 
     cur_time=date.get_gmt()
+    xstart=time.clock()
 
     print('# Processing dataset %s at %s' % (dataset,cur_time))
 
@@ -213,6 +214,8 @@ def do_dataset(dataset='ia21h2e9q',model_type=1,norm=0.3,alpha=0.2,gamma=0.8,e_f
 
     # Carry out peristence subtraction for this dataset
     string=subtract_persist.do_dataset(dataset,model_type,norm,alpha,gamma,e_fermi,kT,fileroot,ds9,local,pffile,lookback_time)
+
+    print('XXX subtract_persist complete in %f s' % (time.clock()-xstart))
 
     log('%s\n' % string)
     if string[0:3]=='NOK':
@@ -233,10 +236,12 @@ def do_dataset(dataset='ia21h2e9q',model_type=1,norm=0.3,alpha=0.2,gamma=0.8,e_f
             log('# Finished dataset %s at %s\n' % (dataset,cur_time))
             return
     
+    print('XXX do_peaks complete in %f s' % (time.clock()-xstart))
     # Evaluate the results at the positions identified in peaks
 
     string=subtract_eval.do_dataset(dataset,local=local)
     log('%s\n' % string)
+    print('XXX subtract_eval complete in %f s' % (time.clock()-xstart))
 
     # Make an html file for the dataset
 
@@ -248,12 +253,14 @@ def do_dataset(dataset='ia21h2e9q',model_type=1,norm=0.3,alpha=0.2,gamma=0.8,e_f
         log('# Finished dataset %s at %s\n' % (dataset,cur_time))
         return
 
+    print('XXX subtract_html complete in %f s' % (time.clock()-xstart))
 
     words=string.split()
 
     # Now update the summary file
     per_list.update_summary(dataset,'Complete_%s'% VERSION,keys=['PerHTML'],values=[words[2]])
 
+    print('XXX update_summary complete in %f s' % (time.clock()-xstart))
 
     cur_time=date.get_gmt()
     log('# Finished dataset %s at %s\n' % (dataset,cur_time))
