@@ -160,45 +160,6 @@ model_a=[]
 model_g=[]
 model_file=''
 
-
-def read_file(filename,char=''):
-    '''
-    Read a file and split it into words, eliminating comments
-    
-    char is an optional parameter used as the delimiter for
-    splitting lines into words.  Otherwise white space is
-    assumed.
-
-    History:
-    
-    110729    ksl    Added optional delimiters
-    140617  ksl    Included here so that the A gamma models 
-            could be read in.  
-    '''
-
-    try:
-        f=open(filename,'r')
-        xlines=f.readlines()
-        f.close()
-    except IOError :
-        print("The file %s does not exist" % filename)
-        return []   
-    
-    lines=[]
-    
-    i=0
-    while i<len(xlines):
-        z=xlines[i].strip()
-        if char=='':
-            z=z.split()
-        else:
-            z=z.split(char)
-        if len(z)>0:
-            if z[0][0]!='#':
-                lines=lines+[z]
-        i=i+1
-    return lines
-
 def read_models(filename='per_fermi/fermi.fits'):
     '''
     Read in the fits models for which can be expressed
@@ -257,12 +218,11 @@ def read_models(filename='per_fermi/fermi.fits'):
         one_gamma=tabdata['gamma']
         model_g.append(one_gamma)
         i=i+1
-    
+
     model_stim=numpy.array(model_stim[0]) # Use only the first row for the stimulus
     model_a=numpy.array(model_a)
     model_g=numpy.array(model_g)
 
-    
     model_file=filename
 
     return
