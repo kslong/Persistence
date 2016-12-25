@@ -93,8 +93,6 @@ def do_dataset(dataset='ib6v19bzq',radius=50,local='yes'):
     110203    ksl    Added local switch so testing would be easier
     '''
 
-    print('XXX dataset %s %f' % (dataset,radius))
-    print('XXX isinteractive',pylab.isinteractive())
 
     xstart=time.clock()
 
@@ -198,7 +196,9 @@ def do_dataset(dataset='ib6v19bzq',radius=50,local='yes'):
         per_hist.append(qper)
         qper=qper+dper
 
-    print('XXX subtract_eval, time to begin plots %f'%  (time.clock()-xstart))
+
+    # Next line is needed to keep the plots from taking an inordinate amount of time
+    pylab.ioff()
 
     source_no=0
     for one in xy:  # Main loop for each point
@@ -371,7 +371,6 @@ def do_dataset(dataset='ib6v19bzq',radius=50,local='yes'):
         all_sorig.append(sorig)
         all_scorr.append(scorr)
 
-        print('XXX subtract_eval, time to complete main loop plot  %f'%  (time.clock()-xstart))
 
         # This ends the main loop for each data point.
 
@@ -495,7 +494,6 @@ def do_dataset(dataset='ib6v19bzq',radius=50,local='yes'):
 
     history.write('End subtract_eval for dataset %s\n' % dataset)
     history.close()
-    print('XXX subtract_eval, time to end  %f' % (time.clock()-xstart))
 
     return
 
