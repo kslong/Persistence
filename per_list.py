@@ -14,13 +14,14 @@ where     fileroot     the root name of the outputfiles
     aperture is 'all' or 'full' with the latter indicating one creates a list containing only the full IR frames, no subarrays
 
     Options:
-    -h        Print this help
+    -h          Print this help
+    -np 6       implies to run in parallel mode with 6 processors
     -all        Create a new .ls file and a new summary file
-    -new_sum     Create a new summary file
-    -daily        Create a new .ls but just update the old summary file
-    -file_type    Instead of the defult flt files, create a file continaing
-            a different file type, e.g. -file_type raw  to get the
-            raw data files
+    -new_sum    Create a new summary file
+    -daily      Create a new .ls but just update the old summary file
+    -file_type  Instead of the defult flt files, create a file continaing
+                a different file type, e.g. -file_type raw  to get the
+                raw data files
 
 without any arguments the call is effectively
 
@@ -376,40 +377,60 @@ def check4duplicates(records):
 
     xstart=time.time()
 
-    unique=set(records['Dataset'])
+    # Remove the duplicates file if it exists to avoid confusion
+    if os.path.isfile('duplicate_files.txt'):
+        os.rename('duplicate_files.txt','duplicate_files.txt.old')
+
+    names=list(records['Dataset'])
+    print(names)
+    print('What',len(names),len(records))
+    unique=set(names)
     if len(unique)==len(records):
         print('check4duplicates: There are no duplicates in the directory structure')
         return records
     else:
-        names=records['Dataset']
         duplicate_names=[]
+        hold_all=[]
+        records2delete=[]
         print('check4duplicates: Warning: There are %d duplicate datasets in the directory structure' % (len(names)-len(unique)))
         for one in unique:
             icount=names.count(one)
             if icount>1:
-                duplicate_names.append(one)
+
+                duplicate_names.append(one)  # these are the names of the duplicate datasets
+
                 hold=[]
                 j=0
-                while j<len(records):
+                while j<len(names):
                     if names[j]==one:
                         hold.append(j)
                         if len(hold)==icount:
                             break   # We have them all
                     j=j+1
+
+                # hold contains the record numbers of the records for this duplicate dataset
+
+                hold_all=hold_all+hold # This indexes all of the duplicate dataset
+
                 times=[]
                 for one in hold:
-                    times.append(records['File-date][one'])
-
+                    times.append(records['File-date'][one])
                 times=numpy.array(times)
                 order=numpy.argsort(times) # Give me the order of the times
+                # Order has index of the hold array in time order.  We want to keep the
+                # last one, and delete the others
                 last=order[len(order)-1]
+
 
                 k=0
                 while k<len(hold):
                     if k!=last:
-                        record['File'][k]='#%s' % record['File'][k]
+                        records2delete.append(hold[k])
                     k=k+1
+    duplicates=records[hold_all]
 
+    duplicates.write('duplicate_files.txt',format='ascii.fixed_width_two_line')
+    records.remove_rows(records2delete)
     print('Check for duplicates in direcory structure took:',time.time()-xstart)
 
     return records
@@ -906,7 +927,6 @@ def get_info(lines,filetype):
     160118    ksl    Added
     '''
 
-    records=[]
     times=[]
 
     if len(lines)==0:
@@ -983,10 +1003,10 @@ def get_info(lines,filetype):
             print('File %s does not really exist' %  xfile)
         i=i+1
         if i%100 == 1:
-            print('Inspected %6d of %6d datasets --> %6d IR datasets' % (i,len(lines),len(records)))
+            print('Inspected %6d of %6d datasets --> %6d IR datasets' % (i,len(lines),len(dataset)))
 
     # Now put the results back into a table
-    print('Inspected %6d of %6d datasets --> %6d IR datasets' % (i,len(lines),len(records)))
+    print('Inspected %6d of %6d datasets --> %6d IR datasets' % (i,len(lines),len(dataset)))
 
     x=Table()
     x['File']=filename
@@ -1009,6 +1029,12 @@ def get_info(lines,filetype):
     x['File-date']=file_create
     x['Mod-time']=file_mod
 
+
+    # Fixup the formats so strings are objects
+    # This is important to prevent truncation of strings
+    for col in x.itercols():
+        if col.dtype.kind in 'SU':
+            x.replace_column(col.name,col.astype('object'))
 
     return x
 
@@ -1166,8 +1192,6 @@ def make_ordered_list(fileroot='observations',filetype='flt',use_old='yes',np=1)
     elif len(old_lines)>0:
         records=old_lines
 
-    # print 'times',len(times)
-    # print 'records',len(records)
 
     key_time=dtime=time.time()-xstart
     print('Inspected all of the files in %f s' % dtime)
