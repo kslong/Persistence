@@ -147,7 +147,7 @@ def read_sum_file(fileroot='observations',status='Complete',prog_id=0,mjd_start=
 		xlines=f.readlines()
 		f.close()
 	except IOError :
-		print "The file %s does not exist" % filename
+		print("The file %s does not exist" % filename)
 		return []   
 	
 	lines=[]
@@ -378,10 +378,10 @@ def doit(fileroot='observations',status='Complete',prog_id=0,mjd_start=0,mjd_sto
 			xlines.append(line)
 	lines=xlines
 
-	print 'Records to process (before censoring):',len(lines)
+	print('Records to process (before censoring):',len(lines))
 
 	if len(lines)==0:
-		print 'There is no lines to process, so returning'
+		print('There is no lines to process, so returning')
 		return
 
 
@@ -397,7 +397,7 @@ def doit(fileroot='observations',status='Complete',prog_id=0,mjd_start=0,mjd_sto
 	title=['Rootname','Prog Id','Date_Proc','Time_Proc','Status','Ext1','Ext2','Ext3','Int1','Int2','Int3']
 	xlines.append(title)
 	for line in lines:
-		print line
+		print(line)
 		xline=[link2file(line[12],line[0])]
 		xline.append(line[1])
 		xline.append(line[3])
@@ -443,7 +443,7 @@ def doit(fileroot='observations',status='Complete',prog_id=0,mjd_start=0,mjd_sto
 
 
 		
-	print 'Records to process (after censoring) :',len(lines)
+	print('Records to process (after censoring) :',len(lines))
 	# print lines[0]
 	# print lines[len(lines)-1]
 
@@ -472,7 +472,7 @@ def steer(argv):
 	i=1
 	while i<len(argv):
 		if argv[i]=='-h':
-			print __doc__ 
+			print(__doc__) 
 			return
 		elif argv[i]=='-prog_id':
 			i=i+1
@@ -489,7 +489,7 @@ def steer(argv):
 				mjd_start=float(z)
 			except	ValueError:
 				mjd_start=date.iso2mjd(z)
-				print 'Start',z,mjd_start
+				print('Start',z,mjd_start)
 		elif argv[i]=='-stop':
 			i=i+1
 			z=argv[i]
@@ -497,7 +497,7 @@ def steer(argv):
 				mjd_stop=float(z)
 			except	ValueError:
 				mjd_stop=date.iso2mjd(z)
-				print 'Stop',z,mjd_stop
+				print('Stop',z,mjd_stop)
 		elif argv[i]=='-today':
 			# today=date.get_gmt('%Y-%m-%d')
 			today=date.get_gmt()
@@ -505,7 +505,7 @@ def steer(argv):
 			proc_start=today-86400
 			proc_stop=today
 		else:
-			print 'Unknown switch %s' % argv[i]
+			print('Unknown switch %s' % argv[i])
 			return
 
 		i=i+1
@@ -518,8 +518,8 @@ def steer(argv):
 		today=date.parse_iso(today)
 		proc_start=today-3600
 		proc_stop=today
-		print 'Creating summary file for last records processes in last hour'
-		print proc_start, proc_stop
+		print('Creating summary file for last records processes in last hour')
+		print(proc_start, proc_stop)
 
 
 

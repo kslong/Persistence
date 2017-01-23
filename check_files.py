@@ -66,7 +66,7 @@ def doit(fileroot='observations'):
 	records=per_list.read_ordered_list0(fileroot)
 	sums=read_summary_file(fileroot)
 
-	print len(records),len(sums)
+	print(len(records),len(sums))
 
 	g=open('Missing.txt','w')
 
@@ -86,7 +86,7 @@ def doit(fileroot='observations'):
 			try:
 				persist_name=sum[12]
 			except IndexError:
-				print 'Incomplete obs.sum record: ',sum
+				print('Incomplete obs.sum record: ',sum)
 		# print flt_name,persist_name
 
 		flt='yes'
@@ -98,13 +98,13 @@ def doit(fileroot='observations'):
 
 		if persist=='no' or flt=='no':
 			string= '%10s %50s %10s  %60s %10s' % (record[1],flt_name,flt,persist_name,persist)
-			print string
+			print(string)
 			g.write('%s\n' % string)
 			nmissing=nmissing+1
 
 		i=i+1
 	g.close()
-	print 'The number of missing files was %d.  See Missing.txt' % nmissing
+	print('The number of missing files was %d.  See Missing.txt' % nmissing)
 	return
 
 

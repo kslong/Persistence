@@ -155,19 +155,19 @@ def doit(fileroot='observations'):
 			os.mkdir(Dir)
 			permissions.set(Dir)
 		except OSError:
-			print '!NOK Could not create %s' % (Dir)
+			print('!NOK Could not create %s' % (Dir))
 
 	# Create each of the individual html files
 
 	pi=[]
 	for prog in progs:
-		print prog
+		print(prog)
 		sum=subtract_sum.read_sum_file(fileroot,'All',prog)
 		records=per_list.read_ordered_list_progid(fileroot,prog)
 		pi.append(records[0][16])
 
 		for one in sum:
-			print one
+			print(one)
 			# subtract_sum.make_html(sum,Dir+'/prog_%s.html'% prog)
 			prog_html(sum,records,Dir+'/prog_%s.html'% prog)
 		

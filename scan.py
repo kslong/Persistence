@@ -91,7 +91,7 @@ def cal_scan(filename='./Visit43/ic9t43j1q_flt.fits[1]'):
 	try:
 		x=fits.open(xfile)
 	except IOError:
-		print 'Error: Could not open %s' % filename
+		print('Error: Could not open %s' % filename)
 		return 
 
 	extime=x[1].header['EXPTIME']
@@ -117,7 +117,7 @@ def compare(filename='./Visit43/ic9t43j1q_flt.fits[1]'):
 	ima_data=per_fits.get_image(ima_file,1,'e',fileref=flt_file)
 	flt_data=per_fits.get_image(flt_file,1,'e')
 
-	print ima_data.shape,flt_data.shape
+	print(ima_data.shape,flt_data.shape)
 
 	per_fits.rewrite_fits(flt_file,'x_flt.fits',1,flt_data)
 	per_fits.rewrite_fits(flt_file,'x_ima.fits',1,ima_data)
@@ -138,4 +138,4 @@ if __name__ == "__main__":
 		# doit(int(sys.argv[1]))
 		doit(sys.argv[1])
 	else:
-		print 'usage: scan.py filename'
+		print('usage: scan.py filename')

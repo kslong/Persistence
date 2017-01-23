@@ -60,7 +60,7 @@ def make_toplevel(dirname,names):
 	dirname=dirname.strip()
 	dirname=dirname.split()
 	dirname=dirname[len(dirname)-1]
-	print dirname
+	print(dirname)
 
 	html_name='doc_'+dirname+'.html'
 
@@ -95,7 +95,7 @@ def write_docs(dirname='../persistence'):
 
 	search_name=dirname+'/*.py'
 	names=glob.glob(search_name)
-	print names
+	print(names)
 	g=open('DoDocs','w')
 
 	roots=[]
@@ -122,5 +122,5 @@ if __name__ == "__main__":
 		# doit(int(sys.argv[1]))
 		write_docs(sys.argv[1])
 	else:
-		print 'usage: write_docs.py  dirname'
+		print('usage: write_docs.py  dirname')
 

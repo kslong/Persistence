@@ -37,7 +37,7 @@ def run_command(one_command='ls -l'):
 
 	proc=subprocess.Popen(one_command,shell=True,stdout=subprocess.PIPE)
 	x=proc.communicate()[0]
-	print x
+	print(x)
 
 	return 
 
@@ -56,16 +56,16 @@ def doit(dirname='foo',data_dir='D'):
 		x=time.strftime('%y%m%d')
 		dirname=x
 	
-	print 'Running regression test in ',dirname
+	print('Running regression test in ',dirname)
 
 	# Create a directory for running the regression test
 
 	try:
 		os.stat(dirname)
-		print 'Directory %s already exists, removing and restarting' % dirname
+		print('Directory %s already exists, removing and restarting' % dirname)
 		run_command('rm -r %s' % dirname)
 	except OSError: 
-		print 'Created directory %s ' % dirname
+		print('Created directory %s ' % dirname)
 
 	os.mkdir(dirname)
 	

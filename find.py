@@ -47,7 +47,7 @@ def find_best(filename='foo'):
 	# Before
 	lines=proc.stdout.readlines()
 	if len(lines)==0:
-			print 'Warning: find_best: No versions of %s found' % filename
+			print('Warning: find_best: No versions of %s found' % filename)
 			return ''
 	tbest=0
 	fbest=''
@@ -72,7 +72,7 @@ if __name__ == "__main__":
 	if len(sys.argv)>1:
 		# doit(int(sys.argv[1]))
 		x=find_best(sys.argv[1])
-		print x
+		print(x)
 	else:
-		print 'usage: find.py  filename'
+		print('usage: find.py  filename')
 
