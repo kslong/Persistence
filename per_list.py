@@ -1229,6 +1229,11 @@ def read_ordered_list0(fileroot='observations'):
     read_ordered_list2
 
     This is the table version
+
+    History
+
+    170208  ksl Fixed a problem where the line id was being interpreted
+                as a float
     '''
 
     try:
@@ -1236,6 +1241,13 @@ def read_ordered_list0(fileroot='observations'):
     except:
         print('Error: read_ordered_list0: Could not open %s ' % (fileroot+'ls'))
         return []
+
+    if x['LineNo'].dtype.kind=='f':
+        xline=[]
+        for one in x['LineNo']:
+            xline.append('%05.3f' % one)
+        x.replace_column('LineNo',xline)
+
 
     return(x)
 
@@ -1252,11 +1264,7 @@ def read_ordered_list2(fileroot='observations',dataset='ibel01p4q',interval=[-1,
 
     # Read the entire file
 
-    try:
-        x=Table.read(fileroot+'.ls',format='ascii.fixed_width_two_line')
-    except:
-        print('Error: read_ordered_list0: Could not open %s ' % (fileroot+'.ls'))
-        return []
+    x=read_ordered_list0(fileroot)
 
 
     # Check the dataset name
@@ -1326,12 +1334,7 @@ def read_ordered_list(fileroot='observations',dataset='last',delta_time=24):
     '''
 
     # Read the entire file
-
-    try:
-        x=Table.read(fileroot+'.ls',format='ascii.fixed_width_two_line')
-    except:
-        print('Error: read_ordered_list0: Could not open %s ' % (fileroot+'.ls'))
-        return []
+    x=read_ordered_list0(fileroot)
 
 
     if dataset!='last':
@@ -1378,11 +1381,7 @@ def read_ordered_list_mjd(fileroot='observations',mjd_start=0,mjd_stop=0):
     101109    ksl    Coded and debugged
     '''
 
-    try:
-        x=Table.read(fileroot+'.ls',format='ascii.fixed_width_two_line')
-    except:
-        print('Error: read_ordered_list0: Could not open %s ' % (fileroot+'.ls'))
-        return []
+    x=read_ordered_list0(fileroot)
 
     nrec=len(x)
 
@@ -1419,13 +1418,14 @@ def read_ordered_list_progid(fileroot='observations',prog_id=11216,mjd_start=0,m
     '''
 
 
-    try:
-        x=Table.read(fileroot+'.ls',format='ascii.fixed_width_two_line')
-    except:
-        print('Error: read_ordered_list0: Could not open %s ' % (fileroot+'.ls'))
-        return []
+    #xxOLD try:
+    #xxOLD     x=Table.read(fileroot+'.ls',format='ascii.fixed_width_two_line')
+    #xxOLD except:
+    #xxOLD     print('Error: read_ordered_list0: Could not open %s ' % (fileroot+'.ls'))
+    #xxOLD     return []
 
 
+    x=read_ordered_list0(fileroot)
 
     if prog_id<=0:
         pass
