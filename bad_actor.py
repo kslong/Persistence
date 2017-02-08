@@ -276,26 +276,25 @@ def write_table(records,results,filename='bad_actor_table.txt'):
             but it is unclear that the straight ascii file is needed any longer.
     '''
 
-    print('XXX',records)
 
     x=vstack(records)
 
-    # records=numpy.array(records)
-    # records=numpy.transpose(records)
+    print('XXX',x)
 
-    # results=numpy.array(results)
-    # results=numpy.transpose(results)
-    # print 'test',records.shape,results.shape
+    results=numpy.array(results)
+    results=numpy.transpose(results)
+    print('ZZZ',results.shape)
 
-    # There are more columns than we want to print out
+    print('What',results)
 
-    # x=Table([records[1],records[2],records[3],records[10],records[11],records[14],records[16]],names=['dataset','ProgID','LineID','Filter','Exptime','Target','PI'])
+    scale=100.
+
     x['MedianFlux']=results[1]
-    x['x_10']=results[2]
-    x['x_5']=results[3]
-    x['x_2']=results[4]
-    x['x_1']=results[5]
-    x['x_0.5']=results[6]
+    x['x_10']=results[2]*scale
+    x['x_5']=results[3]*scale
+    x['x_2']=results[4]*scale
+    x['x_1']=results[5]*scale
+    x['x_0.5']=results[6]*scale
 
     x['MedianFlux'].format='10.2f'
     x['x_10'].format='9.5f'
@@ -303,6 +302,16 @@ def write_table(records,results,filename='bad_actor_table.txt'):
     x['x_2'].format='9.5f'
     x['x_1'].format='9.5f'
     x['x_0.5'].format='9.5f'
+
+    x['Exptime'].format='7.1f'
+
+    print(x.colnames)
+
+    keep=['Dataset', 'ProgID', 'LineNo', 'Filter', 'Exptime', 'Target', 'PI', 'MedianFlux', 'x_10', 'x_5', 'x_2', 'x_1', 'x_0.5']
+
+    x=x[keep]
+
+
     x.write(filename,format='ascii.fixed_width_two_line')
 
 
@@ -385,7 +394,6 @@ def steer(argv):
         do_dataset(fileroot,dataset,exptime)
     elif dataset_list=='All': # Then we are handling multiple datasets
         g=open('Problems.txt','w')
-        f=open(out_root+'_all.txt','w')
         records=per_list.read_ordered_list_progid(fileroot,prog_id,mjd_after,mjd_before)
         print('There are %d images to process' % len(records))
         results=[]
@@ -395,19 +403,12 @@ def steer(argv):
             if len(xxxx)>0:
                 records_out.append(word)
                 results.append(xxxx)
-                string='%10s %10s %10s %10s %10s %20s %20s' % (word[1],word[2],word[3],word[10],word[11],word[14],word[16])
-                scale=100.
-                string2=' %8.1f %8.3f %8.3f %8.3f %8.3f %8.3f ' % (xxxx[1],xxxx[2]*scale,xxxx[3]*scale,xxxx[4]*scale,xxxx[5]*scale,xxxx[6]*scale)
-
-                f.write('%s\n' % (string+string2))
             else:
                 print(('Error: Ignoring %s' % word[1]))
                 g.write('%30s %30s %30s\n' % (word[0],word[1],word[2]))
-        # print 'OK',len(records),len(records_out),len(results)
         g.close()
-        f.close()
         analyze(records_out,results,exptime,out_root)
-        write_table(records_out,results,out_root+'_table.txt')
+        write_table(records_out,results,out_root+'_all.txt')
 
     else:
         print("Don't know how to interpret command line.  Try python -h to get brief help text")
