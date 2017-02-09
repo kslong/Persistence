@@ -227,8 +227,6 @@ def set_path(name,mkdirs='yes',local='no'):
             structure
     '''
 
-    # 110120  - I am not sure why but I had to reimport string
-    import string
 
     if len(name)==0:
         print('Error: set_path: name had length 0, nothing to parse')
@@ -238,13 +236,13 @@ def set_path(name,mkdirs='yes',local='no'):
     # Determine where we want Persist to be located.  
     if local=='no':
         try:
-            i=string.rindex(name,'Persist')
+            i=name.rindex('Persist')
             path=name[0:i]
         except ValueError:
             # Find the last / in the name
 
             try:
-                i=string.rindex(name,'/')
+                i=name.rindex('/')
                 path=name[0:i]
             except ValueError:
                 print('Warning: set_path: Assuming the intent was to work in the current directory')
@@ -312,7 +310,7 @@ def parse_dataset_name(name):
     xname=name
     if xname.count('.') > 0 or xname.count('/') > 0:
         # This must be a filename
-        i=string.rindex(xname,'/')
+        i=xname.rindex('/')
         xname=xname[i+1:i+10]
     
     return xname

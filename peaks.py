@@ -55,7 +55,6 @@ History:
 
 import sys
 import os
-# import string
 import numpy
 from astropy.convolution import convolve, Gaussian2DKernel, Box2DKernel 
 import pylab
