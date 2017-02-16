@@ -1119,7 +1119,7 @@ def steer(argv):
             gamma=eval(argv[i])
         elif argv[i]=='-obslist':
             i=i+1
-            fileroot=eval(argv[i])
+            fileroot=(argv[i])
         elif argv[i]=='-many':
             i=i+1
             dataset_list=argv[i]
