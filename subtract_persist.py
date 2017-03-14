@@ -1145,6 +1145,9 @@ def steer(argv):
             ds9='yes'
         elif argv[i]=='-local':
             local='yes'
+        elif argv[i]=='-dir':
+            i=i+1
+            local=argv[i]
         elif argv[i]=='-pf':
             i=i+1
             parameter_file=argv[i]

@@ -200,31 +200,38 @@ def set_path(name,mkdirs='yes',local='no'):
     This accounts for the somewhat convoluted attempt to locate where the Persist
     directory should be
 
-    mkdirs must be 'yes' for directores to be made.  If it is for example, 'no', 
-    then the path will be return but there will be not attempt to make the
+    mkdirs must be 'yes' for directories to be made.  If it is for example, 'no', 
+    then the path will be returned but there will be not attempt to make the
     directory
 
-    if local is anything but 'no', then the path will be set to ./Persist
+    If local is 'no' then the path for the Persist directory is determined by the name
+    of the file that accompanies the definition.  
+    If local is 'yes' then the directory will be names Persist, and it will sit immediatel
+        below the run directory
+    If local is anything else, then the name will still be below the run directory, but
+        but have the name of the local variable.
 
     
 
-    101014    ksl    Added
-    101214     ksl    Moved into per_list since this is mostly used in conjunction
-            with other routines that are there. It is not obvious that
-            this is the correct place for this.
-    101215    ksl    Added creation of the Figs directory
-    110105    ksl    Made creation of the directories an option
-    110121    ksl    Made change to control permissions of the directories
-    110203    ksl    Made change to allow the directories to be written beneath
+    101014  ksl Added
+    101214  ksl Moved into per_list since this is mostly used in conjunction
+                with other routines that are there. It is not obvious that
+                this is the correct place for this.
+    101215  ksl Added creation of the Figs directory
+    110105  ksl Made creation of the directories an option
+    110121  ksl Made change to control permissions of the directories
+    110203  ksl Made change to allow the directories to be written beneath
             the current working directory, a change that is primarily
             for testing
-    110811    ksl    The directory permissions are set so that the group name 
+    110811  ksl The directory permissions are set so that the group name 
             should be inherited.
-    110811     ksl    Added commands to set the group name, but only if we are
-            in the Quicklook2 directory structure.  These commands
-            would need to change if the group names change or directory
-            names change.  They should have no effect outsdide the standard
-            structure
+    110811  ksl Added commands to set the group name, but only if we are
+                in the Quicklook2 directory structure.  These commands
+                would need to change if the group names change or directory
+                names change.  They should have no effect outside the standard
+                structure
+    170314  ksl Modified so that if local is not yes or no, then one will try 
+                to create a local directoy of a given name
     '''
 
 
@@ -250,14 +257,17 @@ def set_path(name,mkdirs='yes',local='no'):
     else:
         path='./'
 
-    # Check whether the parent directory for Persits exists
+    # Check whether the parent directory for Persist exists
     if os.path.exists(path)==False:
         string='set path: The directory %s contained in %s does not exist' % (path,name)
         print('Error:  %s' % (string))
         return 'NOK %s ' % string
 
 
-    path=path+'/Persist/'
+    if local=='no' or local=='yes':
+        path=path+'/Persist/'
+    else:
+        path='%s/%s/' % (path,local)
 
 
     if mkdirs!='yes':  

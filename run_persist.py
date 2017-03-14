@@ -306,7 +306,7 @@ def steer(argv):
     kT=20000
     fileroot='observations'
     words=[]
-    mjd_start=0.0    # A amall number for mjd
+    mjd_start=0.0    # A small number for mjd
     mjd_stop=1.e6  # A large number for mjd
     dryrun='no'
     clean='no'
@@ -385,6 +385,9 @@ def steer(argv):
             ds9='yes'
         elif argv[i]=='-local':
             local='yes'
+        elif argv[i]=='-dir':
+            i=i+1
+            local=argv[i]
         elif argv[i]=='-pf':
             i=i+1
             pffile=argv[i]
