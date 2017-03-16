@@ -239,13 +239,13 @@ def do_dataset(dataset='ia21h2e9q',model_type=1,norm=0.3,alpha=0.2,gamma=0.8,e_f
     print('XXX do_peaks complete in %f s' % (time.clock()-xstart))
     # Evaluate the results at the positions identified in peaks
 
-    string=subtract_eval.do_dataset(dataset,local=local)
+    string=subtract_eval.do_dataset(dataset,local=local,fileroot=fileroot)
     log('%s\n' % string)
     print('XXX subtract_eval complete in %f s' % (time.clock()-xstart))
 
     # Make an html file for the dataset
 
-    string=subtract_html.do_dataset(dataset,local=local)
+    string=subtract_html.do_dataset(dataset,local=local,fileroot=fileroot)
     log('%s\n' % string)
     if string[0:2]!='OK':
         log('NOK: Processing aborted for dataset %s\n' %dataset)
@@ -258,7 +258,8 @@ def do_dataset(dataset='ia21h2e9q',model_type=1,norm=0.3,alpha=0.2,gamma=0.8,e_f
     words=string.split()
 
     # Now update the summary file
-    per_list.update_summary(dataset,'Complete_%s'% VERSION,keys=['PerHTML'],values=[words[2]])
+    print('hello',fileroot)
+    per_list.update_summary(dataset,'Complete_%s'% VERSION,keys=['PerHTML'],values=[words[2]],fileroot=fileroot)
 
     print('XXX update_summary complete in %f s' % (time.clock()-xstart))
 
@@ -507,7 +508,7 @@ def steer(argv):
 
 
 
-    per_list.fixup_summary_file(datasets)
+    per_list.fixup_summary_file(datasets,fileroot=fileroot)
 
     print('xxx',xstart,time.clock())
 

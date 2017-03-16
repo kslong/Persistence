@@ -79,7 +79,7 @@ def read_peaks(file_xy):
 
 
 
-def do_dataset(dataset='ib6v19bzq',radius=50,local='yes'):
+def do_dataset(dataset='ib6v19bzq',radius=50,local='yes',fileroot='observations'):
     '''
     Examine how well one has succeeded in subtracting persistence
     from a single dataset.  Assuming that all the actual sububraction
@@ -98,9 +98,9 @@ def do_dataset(dataset='ib6v19bzq',radius=50,local='yes'):
 
     # Read information about this dataset from the observations.ls file
     # Note that the file name is hardcoded here
-    record=per_list.read_ordered_list_one('observations',dataset)
+    record=per_list.read_ordered_list_one(fileroot,dataset)
     if len(record)==0:
-        print('Error: subtract_eval: dataset %s not found in observations.ls' % dataset)
+        print('Error: subtract_eval: dataset %s not found in %s.ls' % (dataset,fileroot))
         return 
 
 
