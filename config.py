@@ -32,8 +32,9 @@ History:
 		the version number in the .html file
 151008	ksl	Changed version number to 3.0.2 to reflect bug fix
 		this date.  This is a very minor fix
+170316  ksl Changed version to 3.1 after conversion to Python3
 
 
 '''
 
-version='3.0.2'
+version='3.1'

@@ -586,6 +586,7 @@ def update_summary(dataset,status_word,keys=[],values=[],fileroot='observations'
 
     summary_file=fileroot+'.sum'
     gmt=time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime())
+    words=gmt.split()
 
 
     try:
@@ -612,11 +613,15 @@ def update_summary(dataset,status_word,keys=[],values=[],fileroot='observations'
     # OK at this point I have the old results
 
     old_results['ProcStat']=status_word
+    old_results['Proc-Date']=words[0]
+    old_results['Proc-Time']=words[1]
 
     i=0
     while i<len(keys):
         if keys[i] in set(old_results.colnames):
             old_results[keys[i]]=values[i]
+            if type(values[i])==float:
+                old_results[keys[i]].format='8.4f'
         else:
             print ('Error: Update_summary: key %s not found' % keys[i])
         i+=1
@@ -771,7 +776,6 @@ def make_sum_file(fileroot='observations',new='no'):
     else:
         print('# Merging new records into old list')
         try:
-            # xsum=ascii.read(summary_file)
             xsum=read_table(summary_file,format='fixed_width_two_line')
             if 'ProcStat' in xsum.colnames == False:
                 print ('Error: make_summary_file: %s read but does not have correct table format' % summary_file)
