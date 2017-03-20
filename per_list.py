@@ -616,6 +616,8 @@ def update_summary(dataset,status_word,keys=[],values=[],fileroot='observations'
     old_results['Proc-Date']=words[0]
     old_results['Proc-Time']=words[1]
 
+    old_results=Table(old_results)  # Not sure why this is needed
+
     i=0
     while i<len(keys):
         if keys[i] in set(old_results.colnames):
