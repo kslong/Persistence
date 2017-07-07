@@ -121,6 +121,12 @@ def read_table(filename='foo.txt',format=''):
         print ('Error: file %s does not appear to exist' % filename)
         raise IOError
         return
+    except Exception as e:
+        print('Error: Strange exception of file %s' % filename)
+        raise IOError
+        sys.exit(0)
+
+
 
     return data
 
@@ -667,7 +673,7 @@ def  fixup_summary_file(datasets,fileroot='observations'):
     for dataset in datasets:
         try:
             xname='tmp_sum/%s.txt' % dataset
-            xdata=read_table(xname)
+            xdata=read_table(xname,format='fixed_width_two_line')
             if len(data)==0:
                 data=xdata
             else:
