@@ -1199,12 +1199,17 @@ def make_ordered_list(fileroot='observations',filetype='flt',use_old='yes',np=1)
         p=Pool(np)  
 
         i=0
+        # 180811 - one will have length 0 if all
+        # of the datasets for a particular processor 
+        # have no IR components
         for one in p.map(info_helper,inputs):
-            if i==0:
-                records=one
-            else:
-                records=vstack([records,one])
-            i+=1
+            if len(one)>0:
+                if i==0:
+                    records=one
+                else:
+               	    records=vstack([records,one])
+
+                i+=1
     
     # At this point, records contains all of the new_records
     if len(old_lines)>0 and len(new_lines)>0:
