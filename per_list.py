@@ -396,7 +396,7 @@ def check4duplicates(records):
         os.rename('duplicate_files.txt','duplicate_files.txt.old')
 
     names=list(records['Dataset'])
-    print(names)
+    # XXX
     print('What',len(names),len(records))
     unique=set(names)
     if len(unique)==len(records):
@@ -954,6 +954,8 @@ def get_info(lines,filetype):
         return []
     else:
         print('There are %d datasets to process' % len(lines))
+	# XXX 
+        # lines.write('get_info_in.txt',format='ascii.fixed_width_two_line')
 
     i=0
     filename=[]
@@ -980,6 +982,9 @@ def get_info(lines,filetype):
     for one in lines:
 
         xfile=one['File']
+        #XXX 
+        if xfile=='./QL_GO/11208/Visit02/i9zf02zbq_flt.fits':
+            print('Wrong file here ./QL_GO/11208/Visit02/i9zf02zbq_flt.fits')
 
         if os.path.isfile(xfile) == True:
             x=per_fits.get_keyword(xfile,1,'rootname,proposid,linenum, instrume,detector,expstart,date-obs,time-obs,aperture,filter,exptime,crval1,crval2,targname,asn_id,pr_inv_L')
@@ -1056,6 +1061,8 @@ def get_info(lines,filetype):
         if col.dtype.kind in 'SU':
             x.replace_column(col.name,col.astype('object'))
 
+    # XXX write out get_info before returning
+    # x.write('get_info_out.txt',format='ascii.fixed_width_two_line')
     return x
 
 
@@ -1134,6 +1141,9 @@ def make_ordered_list(fileroot='observations',filetype='flt',use_old='yes',np=1)
         mod_date.append(time.strftime('%Y-%b-%d-%H:%M:%S', time.gmtime(x)))
     lines['Mod-time']=mod_date
 
+    # XXX this is just debugging
+    lines.write('lines.txt',format='ascii.fixed_width_two_line')
+
     old_lines=[] # This just sets up defaults
     new_lines=lines
 
@@ -1152,6 +1162,9 @@ def make_ordered_list(fileroot='observations',filetype='flt',use_old='yes',np=1)
 
     if use_old=='yes':
         xjoin=join(lines,obs_old,keys=['File'],join_type='left')
+	# XXX
+        print('test1:', len(xjoin),len(lines))
+        xjoin.write('xjoin.txt',format='ascii.fixed_width_two_line')
         old=[]
         new=[]
         i=0
@@ -1162,12 +1175,17 @@ def make_ordered_list(fileroot='observations',filetype='flt',use_old='yes',np=1)
             else:
                 new.append(i)
             i+=1
+
         if len(old)>0:
             old_lines=xjoin[old]
             old_lines.rename_column('Mod-time_2','Mod-time')
             old_lines.remove_column('Mod-time_1')
         if len(new)>0:
-            new_lines=lines[new]
+            # XXX new_lines=lines[new]
+            new_lines=xjoin[new]
+            new_lines.rename_column('Mod-time_2','Mod-time')
+            new_lines.remove_column('Mod-time_1')
+
         else:
             new_lines=[]
 
@@ -1176,6 +1194,9 @@ def make_ordered_list(fileroot='observations',filetype='flt',use_old='yes',np=1)
     #  Ignore this for now
 
     print('Of %d files, %d are old, and %d are new' % (len(lines),len(old_lines),len(new_lines)))
+
+    old_lines.write('old_lines_test.txt',format='ascii.fixed_width_two_line')
+    new_lines.write('new_lines_test.txt',format='ascii.fixed_width_two_line')
 
 
     if len(new_lines)==0:
@@ -1211,6 +1232,11 @@ def make_ordered_list(fileroot='observations',filetype='flt',use_old='yes',np=1)
 
                 i+=1
     
+    # XXX write out arrays to debug what is going on
+
+    records.write('new.txt',format='ascii.fixed_width_two_line')
+    old_lines.write('old.txt',format='ascii.fixed_width_two_line')
+
     # At this point, records contains all of the new_records
     if len(old_lines)>0 and len(new_lines)>0:
         records=vstack([old_lines,records])
@@ -1230,7 +1256,13 @@ def make_ordered_list(fileroot='observations',filetype='flt',use_old='yes',np=1)
 
     records.sort('ExpStart')
 
+    # XXX write out records before and after check for duplicates
+    records.write('combined_before.txt',format='ascii.fixed_width_two_line')
+
     records=check4duplicates(records)
+
+    # XXX write out records before and after check for duplicates
+    records.write('combined_after.txt',format='ascii.fixed_width_two_line')
 
     records.write(fileroot+'.ls',format='ascii.fixed_width_two_line')
     
