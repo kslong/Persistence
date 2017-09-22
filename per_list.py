@@ -395,10 +395,20 @@ def check4duplicates(records):
     if os.path.isfile('duplicate_files.txt'):
         os.rename('duplicate_files.txt','duplicate_files.txt.old')
 
-    names=list(records['Dataset'])
+    # names=list(records['Dataset'])
+    names=numpy.array(records['Dataset'])
     # XXX
     print('What',len(names),len(records))
-    unique=set(names)
+    # unique=set(names)
+    unique=numpy.unique(names)
+    print('Check4Duplicates: There are %d records to check, and %d unique datasets' % (len(names),len(unique)))
+    x=Table([names],names=['Dataset'])
+    x.write('check4dup_in.txt',format='ascii.fixed_width_two_line')
+    y=Table([unique],names=['Dataset'])
+    y.write('check4dup_unique.txt',format='ascii.fixed_width_two_line')
+
+
+
     if len(unique)==len(records):
         print('check4duplicates: There are no duplicates in the directory structure')
         return records
@@ -804,8 +814,10 @@ def make_sum_file(fileroot='observations',new='no'):
                     break
                 i+=1
             j=j+1
+            if j % 1000 == 0:
+                print('Merged %d of %d records' % (j,len(xmm)))
 
-        g.write('tmp.sum.txt',format='ascii.fixed_width_two_line')
+        g.write('tmp.sum.txt',format='ascii.fixed_width_two_line',overwrite=True)
 
 
         ndup=check_sum_file('tmp.sum.txt',summary_file)
@@ -1027,7 +1039,7 @@ def get_info(lines,filetype):
         else: 
             print('File %s does not really exist' %  xfile)
         i=i+1
-        if i%100 == 1:
+        if i%1000 == 1:
             print('Inspected %6d of %6d datasets --> %6d IR datasets' % (i,len(lines),len(dataset)))
 
     # Now put the results back into a table
@@ -1197,6 +1209,22 @@ def make_ordered_list(fileroot='observations',filetype='flt',use_old='yes',np=1)
 
     old_lines.write('old_lines_test.txt',format='ascii.fixed_width_two_line')
     new_lines.write('new_lines_test.txt',format='ascii.fixed_width_two_line')
+    #  XXX 179818 - There is not a problem here, apparently.  Thigs are either in new or or old
+
+    x1=numpy.array(old_lines['File'])
+    x2=numpy.array(new_lines['File'])
+    x_all=numpy.concatenate([x1,x2])
+
+    z1=numpy.unique(x1)
+    z2=numpy.unique(x2)
+    z_all=numpy.unique(x_all)
+
+    print('unique all %d old %d new %d sum %d' % (len(z_all),len(z1),len(z2),len(z1)+len(z2)))
+
+    if (len(z_all)!=len(z1)+len(z2)):
+	    print('This should not happen.  It looks as if there are duplicate file names in our list, so quitting')
+	    sys.exit(0)
+
 
 
     if len(new_lines)==0:
@@ -1212,7 +1240,7 @@ def make_ordered_list(fileroot='observations',filetype='flt',use_old='yes',np=1)
             imax=i+idelta
             if imax>len(new_lines):
                 imax=len(new_lines)
-            xinputs=lines[imin:imax]
+            xinputs=new_lines[imin:imax]
             inputs.append([xinputs,filetype])
             i=i+idelta
 
@@ -1233,6 +1261,7 @@ def make_ordered_list(fileroot='observations',filetype='flt',use_old='yes',np=1)
                 i+=1
     
     # XXX write out arrays to debug what is going on
+    # XXX 170918 - The problem exists at this point.  records contains files which are in old_lines
 
     records.write('new.txt',format='ascii.fixed_width_two_line')
     old_lines.write('old.txt',format='ascii.fixed_width_two_line')
