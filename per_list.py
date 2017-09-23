@@ -452,7 +452,6 @@ def check4duplicates(records):
                     if k!=last:
                         records2delete.append(hold[k])
                     k=k+1
-            print(i)
             i+=1
     duplicates=records[hold_all]
 
@@ -818,7 +817,7 @@ def make_sum_file(fileroot='observations',new='no'):
                 i+=1
             j=j+1
             if j % 1000 == 0:
-                print('Merged %d of %d records' % (j,len(xmm)))
+                print('Merged %d of %d records' % (j,len(xsum)))
 
         g.write('tmp.sum.txt',format='ascii.fixed_width_two_line',overwrite=True)
 
@@ -1066,8 +1065,9 @@ def get_info(lines,filetype):
     x['File-date']=file_create
     x['Mod-time']=file_mod
 
-    print('x in get_info')
-    x.info()
+    # XXX
+    # print('x in get_info')
+    # x.info()
 
 
     # Fixup the formats so strings are objects
@@ -1155,6 +1155,7 @@ def make_ordered_list(fileroot='observations',filetype='flt',use_old='yes',np=1)
         x=os.path.getmtime(one['File'])
         mod_date.append(time.strftime('%Y-%b-%d-%H:%M:%S', time.gmtime(x)))
     lines['Mod-time']=mod_date
+    lines.replace_column('Mod-time',lines['Mod-time'].astype('object'))
 
     # XXX this is just debugging
     lines.write('lines.txt',format='ascii.fixed_width_two_line',overwrite=True)
@@ -1193,13 +1194,13 @@ def make_ordered_list(fileroot='observations',filetype='flt',use_old='yes',np=1)
 
         if len(old)>0:
             old_lines=xjoin[old]
-            old_lines.rename_column('Mod-time_2','Mod-time')
-            old_lines.remove_column('Mod-time_1')
+            old_lines.rename_column('Mod-time_1','Mod-time')
+            old_lines.remove_column('Mod-time_2')
         if len(new)>0:
             # XXX new_lines=lines[new]
             new_lines=xjoin[new]
-            new_lines.rename_column('Mod-time_2','Mod-time')
-            new_lines.remove_column('Mod-time_1')
+            new_lines.rename_column('Mod-time_1','Mod-time')
+            new_lines.remove_column('Mod-time_2')
 
         else:
             new_lines=[]
@@ -1273,10 +1274,11 @@ def make_ordered_list(fileroot='observations',filetype='flt',use_old='yes',np=1)
 
     # At this point, records contains all of the new_records
     if len(old_lines)>0 and len(new_lines)>0:
-        print('records')
-        records.info()
-        print('old_lines')
-        old_lines.info()
+        # XXX
+        # print('records')
+        # records.info()
+        # print('old_lines')
+        # old_lines.info()
         records=vstack([old_lines,records])
     elif len(old_lines)>0:
         records=old_lines
