@@ -1154,7 +1154,7 @@ def make_ordered_list(fileroot='observations',filetype='flt',use_old='yes',np=1)
     lines['Mod-time']=mod_date
 
     # XXX this is just debugging
-    lines.write('lines.txt',format='ascii.fixed_width_two_line')
+    lines.write('lines.txt',format='ascii.fixed_width_two_line',overwrite=True)
 
     old_lines=[] # This just sets up defaults
     new_lines=lines
@@ -1207,23 +1207,24 @@ def make_ordered_list(fileroot='observations',filetype='flt',use_old='yes',np=1)
 
     print('Of %d files, %d are old, and %d are new' % (len(lines),len(old_lines),len(new_lines)))
 
-    old_lines.write('old_lines_test.txt',format='ascii.fixed_width_two_line')
-    new_lines.write('new_lines_test.txt',format='ascii.fixed_width_two_line')
+    if len(old_lines) and len(new_lines):
+        old_lines.write('old_lines_test.txt',format='ascii.fixed_width_two_line',overwrite=True)
+        new_lines.write('new_lines_test.txt',format='ascii.fixed_width_two_line',overwrite=True)
     #  XXX 179818 - There is not a problem here, apparently.  Thigs are either in new or or old
 
-    x1=numpy.array(old_lines['File'])
-    x2=numpy.array(new_lines['File'])
-    x_all=numpy.concatenate([x1,x2])
+        x1=numpy.array(old_lines['File'])
+        x2=numpy.array(new_lines['File'])
+        x_all=numpy.concatenate([x1,x2])
 
-    z1=numpy.unique(x1)
-    z2=numpy.unique(x2)
-    z_all=numpy.unique(x_all)
+        z1=numpy.unique(x1)
+        z2=numpy.unique(x2)
+        z_all=numpy.unique(x_all)
 
-    print('unique all %d old %d new %d sum %d' % (len(z_all),len(z1),len(z2),len(z1)+len(z2)))
+        print('unique all %d old %d new %d sum %d' % (len(z_all),len(z1),len(z2),len(z1)+len(z2)))
 
-    if (len(z_all)!=len(z1)+len(z2)):
-	    print('This should not happen.  It looks as if there are duplicate file names in our list, so quitting')
-	    sys.exit(0)
+        if (len(z_all)!=len(z1)+len(z2)):
+	        print('This should not happen.  It looks as if there are duplicate file names in our list, so quitting')
+	        sys.exit(0)
 
 
 
@@ -1263,8 +1264,9 @@ def make_ordered_list(fileroot='observations',filetype='flt',use_old='yes',np=1)
     # XXX write out arrays to debug what is going on
     # XXX 170918 - The problem exists at this point.  records contains files which are in old_lines
 
-    records.write('new.txt',format='ascii.fixed_width_two_line')
-    old_lines.write('old.txt',format='ascii.fixed_width_two_line')
+    records.write('new.txt',format='ascii.fixed_width_two_line',overwrite=True)
+    if len(old_lines):
+        old_lines.write('old.txt',format='ascii.fixed_width_two_line',overwrite=True)
 
     # At this point, records contains all of the new_records
     if len(old_lines)>0 and len(new_lines)>0:
