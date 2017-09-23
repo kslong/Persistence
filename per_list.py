@@ -400,12 +400,8 @@ def check4duplicates(records):
     # XXX
     print('What',len(names),len(records))
     # unique=set(names)
-    unique=numpy.unique(names)
+    unique,counts=numpy.unique(names,return_counts=True)
     print('Check4Duplicates: There are %d records to check, and %d unique datasets' % (len(names),len(unique)))
-    x=Table([names],names=['Dataset'])
-    x.write('check4dup_in.txt',format='ascii.fixed_width_two_line')
-    y=Table([unique],names=['Dataset'])
-    y.write('check4dup_unique.txt',format='ascii.fixed_width_two_line')
 
 
 
@@ -414,12 +410,17 @@ def check4duplicates(records):
         return records
     else:
         duplicate_names=[]
+        i=0
+        #while i<len(unique):
+        #    if counts[i]>1:
+        #        duplicate_names.append(unique[i])
+        #    i+=1
         hold_all=[]
         records2delete=[]
         print('check4duplicates: Warning: There are %d duplicate datasets in the directory structure' % (len(names)-len(unique)))
+        i=0
         for one in unique:
-            icount=names.count(one)
-            if icount>1:
+            if counts[i]>1:
 
                 duplicate_names.append(one)  # these are the names of the duplicate datasets
 
@@ -428,7 +429,7 @@ def check4duplicates(records):
                 while j<len(names):
                     if names[j]==one:
                         hold.append(j)
-                        if len(hold)==icount:
+                        if len(hold)==counts[i]:
                             break   # We have them all
                     j=j+1
 
@@ -451,6 +452,8 @@ def check4duplicates(records):
                     if k!=last:
                         records2delete.append(hold[k])
                     k=k+1
+            print(i)
+            i+=1
     duplicates=records[hold_all]
 
     duplicates.write('duplicate_files.txt',format='ascii.fixed_width_two_line')
@@ -967,7 +970,7 @@ def get_info(lines,filetype):
     else:
         print('There are %d datasets to process' % len(lines))
 	# XXX 
-        # lines.write('get_info_in.txt',format='ascii.fixed_width_two_line')
+        lines.write('get_info_in.txt',format='ascii.fixed_width_two_line',overwrite=True)
 
     i=0
     filename=[]
@@ -994,9 +997,6 @@ def get_info(lines,filetype):
     for one in lines:
 
         xfile=one['File']
-        #XXX 
-        if xfile=='./QL_GO/11208/Visit02/i9zf02zbq_flt.fits':
-            print('Wrong file here ./QL_GO/11208/Visit02/i9zf02zbq_flt.fits')
 
         if os.path.isfile(xfile) == True:
             x=per_fits.get_keyword(xfile,1,'rootname,proposid,linenum, instrume,detector,expstart,date-obs,time-obs,aperture,filter,exptime,crval1,crval2,targname,asn_id,pr_inv_L')
@@ -1065,6 +1065,9 @@ def get_info(lines,filetype):
     x['PI']=investigator
     x['File-date']=file_create
     x['Mod-time']=file_mod
+
+    print('x in get_info')
+    x.info()
 
 
     # Fixup the formats so strings are objects
@@ -1176,7 +1179,7 @@ def make_ordered_list(fileroot='observations',filetype='flt',use_old='yes',np=1)
         xjoin=join(lines,obs_old,keys=['File'],join_type='left')
 	# XXX
         print('test1:', len(xjoin),len(lines))
-        xjoin.write('xjoin.txt',format='ascii.fixed_width_two_line')
+        xjoin.write('xjoin.txt',format='ascii.fixed_width_two_line',overwrite=True)
         old=[]
         new=[]
         i=0
@@ -1270,6 +1273,10 @@ def make_ordered_list(fileroot='observations',filetype='flt',use_old='yes',np=1)
 
     # At this point, records contains all of the new_records
     if len(old_lines)>0 and len(new_lines)>0:
+        print('records')
+        records.info()
+        print('old_lines')
+        old_lines.info()
         records=vstack([old_lines,records])
     elif len(old_lines)>0:
         records=old_lines
