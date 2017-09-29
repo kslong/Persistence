@@ -1167,7 +1167,9 @@ def make_ordered_list(fileroot='observations',filetype='flt',use_old='yes',np=1)
             old_lines.rename_column('Mod-time_2','Mod-time')
             old_lines.remove_column('Mod-time_1')
         if len(new)>0:
-            new_lines=lines[new]
+            new_lines=xjoin[new]
+            new_lines.rename_column('Mod-time_1','Mod-time')
+            new_lines.remove_column('Mod-time_2')
         else:
             new_lines=[]
 
@@ -1180,7 +1182,7 @@ def make_ordered_list(fileroot='observations',filetype='flt',use_old='yes',np=1)
 
     if len(new_lines)==0:
         pass
-    elif np<=1 or len(lines)<np:
+    elif np<=1 or len(new_lines)<np:
         records=get_info(new_lines,filetype)
     else:
         inputs=[]
