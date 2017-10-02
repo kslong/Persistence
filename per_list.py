@@ -396,7 +396,7 @@ def check4duplicates(records):
         os.rename('duplicate_files.txt','duplicate_files.txt.old')
 
     names=list(records['Dataset'])
-    print(names)
+    # print(names)
     print('What',len(names),len(records))
     unique=set(names)
     if len(unique)==len(records):
@@ -443,7 +443,7 @@ def check4duplicates(records):
                     k=k+1
     duplicates=records[hold_all]
 
-    duplicates.write('duplicate_files.txt',format='ascii.fixed_width_two_line')
+    duplicates.write('duplicate_files.txt',format='ascii.fixed_width_two_line',overwrite=True)
     records.remove_rows(records2delete)
     print('Check for duplicates in direcory structure took:',time.time()-xstart)
 
@@ -639,7 +639,7 @@ def update_summary(dataset,status_word,keys=[],values=[],fileroot='observations'
     # in order to be able to write it out
 
     old_results=Table(old_results)
-    old_results.write('tmp_sum/%s.txt' % dataset,format='ascii.fixed_width_two_line')
+    old_results.write('tmp_sum/%s.txt' % dataset,format='ascii.fixed_width_two_line',overwrite=True)
 
     return
 
@@ -710,7 +710,7 @@ def  fixup_summary_file(datasets,fileroot='observations'):
 
 
     backup(summary_file)
-    xsum.write(summary_file,format='ascii.fixed_width_two_line')
+    xsum.write(summary_file,format='ascii.fixed_width_two_line',overwrite=True)
 
     return
 
@@ -794,6 +794,7 @@ def make_sum_file(fileroot='observations',new='no'):
 
 
 
+        print('There are %d records to merge' % len(g))
         j=0
         for one in g:
             i=0
@@ -804,8 +805,10 @@ def make_sum_file(fileroot='observations',new='no'):
                     break
                 i+=1
             j=j+1
+            if j % 100 == 0:
+                print('Merged %d of %d records in to sum file' % (j,len(g)))
 
-        g.write('tmp.sum.txt',format='ascii.fixed_width_two_line')
+        g.write('tmp.sum.txt',format='ascii.fixed_width_two_line',overwrite=True)
 
 
         ndup=check_sum_file('tmp.sum.txt',summary_file)
@@ -1234,7 +1237,7 @@ def make_ordered_list(fileroot='observations',filetype='flt',use_old='yes',np=1)
 
     records=check4duplicates(records)
 
-    records.write(fileroot+'.ls',format='ascii.fixed_width_two_line')
+    records.write(fileroot+'.ls',format='ascii.fixed_width_two_line',overwrite=True)
     
 
 
