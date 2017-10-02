@@ -752,33 +752,59 @@ def make_sum_file(fileroot='observations',new='no'):
     summary_file=fileroot+'.sum'
 
 
-    # Create pristine file
+    # Create pristine file.  Note that x is the observations.ls file, and so
+    # The pristine file has all of the elements of the old file, but everything is set to unprocessed.
 
-    g=x['Dataset','ProgID','ExpStart']
-    g['Proc-Date']=proc_date
-    g['Proc-Time']=proc_time
-    g['ProcStat']='Unprocessed'
-    g['E0.10']=-99.
-    g['E0.03']=-99.
-    g['E0.01']=-99.
-    g['I0.10']=-99.
-    g['I0.03']=-99.
-    g['I0.01']=-99.
-    g['PerHTML']='--'
+    # g=x['Dataset','ProgID','ExpStart']
+    # g['Proc-Date']=proc_date
+    # g['Proc-Time']=proc_time
+    # g['ProcStat']='Unprocessed'
+    # g['E0.10']=-99.
+    # g['E0.03']=-99.
+    # g['E0.01']=-99.
+    # g['I0.10']=-99.
+    # g['I0.03']=-99.
+    # g['I0.01']=-99.
+    # g['PerHTML']='--'
 
     # The next steps are necessary, whenever the an ascii table is
     # read in, and there is a chance the updates will result in 
     # strings which are longer than the current format.  Withot
     # this the strings will be truncated in the ouput table
-    for col in g.itercols():
-        if col.dtype.kind in 'SU':
-               g.replace_column(col.name, col.astype('object'))
+    # for col in g.itercols():
+    #     if col.dtype.kind in 'SU':
+    #            g.replace_column(col.name, col.astype('object'))
 
 
 
 
     if os.path.exists(summary_file)==False or new=='yes':
         print('# Making a pristine summary file')
+
+    # Create pristine file.  Note that x is the observations.ls file, and so
+    # The pristine file has all of the elements of the old file, but everything is set to unprocessed.
+
+        g=x['Dataset','ProgID','ExpStart']
+        g['Proc-Date']=proc_date
+        g['Proc-Time']=proc_time
+        g['ProcStat']='Unprocessed'
+        g['E0.10']=-99.
+        g['E0.03']=-99.
+        g['E0.01']=-99.
+        g['I0.10']=-99.
+        g['I0.03']=-99.
+        g['I0.01']=-99.
+        g['PerHTML']='--'
+
+    # The next steps are necessary, whenever the an ascii table is
+    # read in, and there is a chance the updates will result in 
+    # strings which are longer than the current format.  Withot
+    # this the strings will be truncated in the ouput table
+        for col in g.itercols():
+            if col.dtype.kind in 'SU':
+                g.replace_column(col.name, col.astype('object'))
+
+
         g.write(summary_file,format='ascii.fixed_width_two_line')
 
     else:
@@ -792,29 +818,49 @@ def make_sum_file(fileroot='observations',new='no'):
             print('Error: make_sum_file: Could not read summary file %s ' % summary_file)
             return
 
+        print('There are %d records to merge' % len(xsum))
+
+        xxx=x['Dataset','ProgID','ExpStart']
+        for col in xxx.itercols():
+            if col.dtype.kind in 'SU':
+                xxx.replace_column(col.name, col.astype('object'))
+
+        xxxx=join(xxx,xsum,join_type='left')
+        xxxx['E0.10']=xxxx['E0.10'].filled(-99.)
+        xxxx['E0.03']=xxxx['E0.03'].filled(-99.)
+        xxxx['E0.01']=xxxx['E0.01'].filled(-99.)
+        xxxx['I0.10']=xxxx['I0.10'].filled(-99.)
+        xxxx['I0.03']=xxxx['I0.03'].filled(-99.)
+        xxxx['I0.01']=xxxx['I0.01'].filled(-99.)
+        xxxx['ProcStat']=xxxx['ProcStat'].filled('Unprocessed')
+        xxxx['Proc-Date']=xxxx['Proc-Date'].filled(proc_date)
+        xxxx['Proc-Time']=xxxx['Proc-Time'].filled(proc_time)
+        xxxx['PerHTML']=xxxx['PerHTML'].filled('--')
+        xxxx.sort('ExpStart')
+
+        xxxx.write('tmp.sum.txt',format='ascii.fixed_width_two_line',overwrite=True)
 
 
-        print('There are %d records to merge' % len(g))
-        j=0
-        for one in g:
-            i=0
+        # j=0
+        # for one in g:
+        #     i=0
 
-            while i<len(xsum):
-                if xsum['Dataset'][i]==one['Dataset']:
-                    g[j]=xsum[i]
-                    break
-                i+=1
-            j=j+1
-            if j % 100 == 0:
-                print('Merged %d of %d records in to sum file' % (j,len(g)))
+        #   while i<len(xsum):
+        #       if xsum['Dataset'][i]==one['Dataset']:
+        #           g[j]=xsum[i]
+        #           break
+        #       i+=1
+        #   j=j+1
+        #   if j % 100 == 0:
+        #       print('Merged %d of %d records in to sum file' % (j,len(g)))
 
-        g.write('tmp.sum.txt',format='ascii.fixed_width_two_line',overwrite=True)
+        # g.write('tmp.sum.txt',format='ascii.fixed_width_two_line',overwrite=True)
 
 
         ndup=check_sum_file('tmp.sum.txt',summary_file)
 
         if ndup>0:
-            print('Error: make_sum_file: Since there were duplicates in th tmp file, not moving to %s'  % (summary_file))
+            print('Error: make_sum_file: Since there were duplicates in the tmp file, not moving to %s'  % (summary_file))
             return 'NOK  - Since there were duplicates in th tmp file, not moving to %s'  % (summary_file)
 
         # Now move the files around.  Note that the next 3 lines need to be the same as in update_summary above
