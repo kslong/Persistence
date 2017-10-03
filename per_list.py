@@ -397,12 +397,14 @@ def check4duplicates(records):
 
     names=list(records['Dataset'])
     # print(names)
-    print('What',len(names),len(records))
     unique=set(names)
+    print('WhatL names, records, unique',len(names),len(records),len(unique))
     if len(unique)==len(records):
         print('check4duplicates: There are no duplicates in the directory structure')
         return records
     else:
+        # XXX - Print the file 
+        records.write('knox.txt',format='ascii.fixed_width_two_line',overwrite=True)
         duplicate_names=[]
         hold_all=[]
         records2delete=[]
@@ -826,16 +828,20 @@ def make_sum_file(fileroot='observations',new='no'):
                 xxx.replace_column(col.name, col.astype('object'))
 
         xxxx=join(xxx,xsum,join_type='left')
-        xxxx['E0.10']=xxxx['E0.10'].filled(-99.)
-        xxxx['E0.03']=xxxx['E0.03'].filled(-99.)
-        xxxx['E0.01']=xxxx['E0.01'].filled(-99.)
-        xxxx['I0.10']=xxxx['I0.10'].filled(-99.)
-        xxxx['I0.03']=xxxx['I0.03'].filled(-99.)
-        xxxx['I0.01']=xxxx['I0.01'].filled(-99.)
-        xxxx['ProcStat']=xxxx['ProcStat'].filled('Unprocessed')
-        xxxx['Proc-Date']=xxxx['Proc-Date'].filled(proc_date)
-        xxxx['Proc-Time']=xxxx['Proc-Time'].filled(proc_time)
-        xxxx['PerHTML']=xxxx['PerHTML'].filled('--')
+        try:
+            xxxx['E0.10']=xxxx['E0.10'].filled(-99.)
+            xxxx['E0.03']=xxxx['E0.03'].filled(-99.)
+            xxxx['E0.01']=xxxx['E0.01'].filled(-99.)
+            xxxx['I0.10']=xxxx['I0.10'].filled(-99.)
+            xxxx['I0.03']=xxxx['I0.03'].filled(-99.)
+            xxxx['I0.01']=xxxx['I0.01'].filled(-99.)
+            xxxx['ProcStat']=xxxx['ProcStat'].filled('Unprocessed')
+            xxxx['Proc-Date']=xxxx['Proc-Date'].filled(proc_date)
+            xxxx['Proc-Time']=xxxx['Proc-Time'].filled(proc_time)
+            xxxx['PerHTML']=xxxx['PerHTML'].filled('--')
+        except AttributeError:
+            # There were no columns with missing values
+            pass
         xxxx.sort('ExpStart')
 
         xxxx.write('tmp.sum.txt',format='ascii.fixed_width_two_line',overwrite=True)
@@ -1201,6 +1207,7 @@ def make_ordered_list(fileroot='observations',filetype='flt',use_old='yes',np=1)
 
     if use_old=='yes':
         xjoin=join(lines,obs_old,keys=['File'],join_type='left')
+        xjoin.write('foo.txt',format='ascii.fixed_width_two_line',overwrite=True)
         old=[]
         new=[]
         i=0
@@ -1228,6 +1235,17 @@ def make_ordered_list(fileroot='observations',filetype='flt',use_old='yes',np=1)
 
     print('Of %d files, %d are old, and %d are new' % (len(lines),len(old_lines),len(new_lines)))
 
+    #XXX add test for uniqueness
+    xlines=list(lines['File'])
+    xlines_unique=set(xlines)
+    xold=list(old_lines['File'])
+    xold_unique=set(xold)
+    xnew=list(new_lines['File'])
+    xnew_unique=set(xnew)
+
+    print('test1',len(xlines_unique),len(xold_unique),len(xnew_unique),len(xold_unique)+len(xnew_unique))
+
+
 
     if len(new_lines)==0:
         pass
@@ -1235,7 +1253,7 @@ def make_ordered_list(fileroot='observations',filetype='flt',use_old='yes',np=1)
         records=get_info(new_lines,filetype)
     else:
         inputs=[]
-        idelta=len(new_lines)/np +1
+        idelta=len(new_lines)//np +1
         i=0
         while i < len(new_lines):
             imin=i
@@ -1243,6 +1261,7 @@ def make_ordered_list(fileroot='observations',filetype='flt',use_old='yes',np=1)
             if imax>len(new_lines):
                 imax=len(new_lines)
             xinputs=lines[imin:imax]
+            print('test',imin,imax)
             inputs.append([xinputs,filetype])
             i=i+idelta
 
@@ -1253,17 +1272,19 @@ def make_ordered_list(fileroot='observations',filetype='flt',use_old='yes',np=1)
         # 180811 - one will have length 0 if all
         # of the datasets for a particular processor 
         # have no IR components
+        records=[]  # just a dummy
         for one in p.map(info_helper,inputs):
             if len(one)>0:
                 if i==0:
                     records=one
                 else:
                	    records=vstack([records,one])
-
                 i+=1
     
     # At this point, records contains all of the new_records
-    if len(old_lines)>0 and len(new_lines)>0:
+    print('Before stacking old records and new records', len(old_lines),len(new_lines))
+    # if len(old_lines)>0 and len(new_lines)>0:
+    if len(old_lines)>0 and len(records)>0:
         records=vstack([old_lines,records])
     elif len(old_lines)>0:
         records=old_lines
@@ -1280,6 +1301,8 @@ def make_ordered_list(fileroot='observations',filetype='flt',use_old='yes',np=1)
     # This returns an index of the order of the lines
 
     records.sort('ExpStart')
+
+    print('No of records before check4duplicates',len(records))
 
     records=check4duplicates(records)
 
