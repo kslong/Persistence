@@ -107,6 +107,7 @@ def read_table(filename='foo.txt',format=''):
 
     161214  ksl Added in order to handle potential isssues
         with string truncation
+    171005  ksl Added a fixup for LineNo being a number
 
     '''
     try:
@@ -114,6 +115,12 @@ def read_table(filename='foo.txt',format=''):
             data=ascii.read(filename)
         else:
             data=ascii.read(filename,format=format)
+        for col in data.colnames:
+            if col=='LineNo' and data['LineNo'].dtype.kind=='f':
+                xline=[]
+                for one in data['LineNo']:
+                    xline.append('%05.3f' % one)
+                data.replace_column('LineNo',xline)
         for col in data.itercols():
             if col.dtype.kind in 'SU':
                 data.replace_column(col.name,col.astype('object'))
@@ -121,12 +128,6 @@ def read_table(filename='foo.txt',format=''):
         print ('Error: file %s does not appear to exist' % filename)
         raise IOError
         return
-    except Exception as e:
-        print('Error: Strange exception of file %s' % filename)
-        raise IOError
-        sys.exit(0)
-
-
 
     return data
 
@@ -742,7 +743,7 @@ def make_sum_file(fileroot='observations',new='no'):
 
     # Read the entire observations.ls file
     print('# (Re)Making summary file')
-    x=read_ordered_list0(fileroot)
+    x=read_table(fileroot+'.ls')
     print('# The number of records in the old per_list file is %d' % (len(x)))
 
 
@@ -1178,7 +1179,6 @@ def make_ordered_list(fileroot='observations',filetype='flt',use_old='yes',np=1)
     print('# Found all of the files to read in %f s' % dtime)
     xstart=time.time()
 
-    # lines=ascii.read('files.ls',format='no_header')
     lines=read_table('files.ls',format='no_header')
     lines.rename_column('col1','File')
 
@@ -1194,8 +1194,11 @@ def make_ordered_list(fileroot='observations',filetype='flt',use_old='yes',np=1)
 
     if use_old=='yes':
         try:
-            # obs_old=ascii.read(fileroot+'.ls')
             obs_old=read_table(fileroot+'.ls')
+            for col in obs_old.itercols():
+                if col.dtype.kind in 'SU':
+                    old_obs.replace_column(col.name,col.astype('object'))
+
             # Next couple of lines can be deleted once fully transitioned to new version
             # of per_list
             xset=set(obs_old.colnames)
@@ -1236,17 +1239,19 @@ def make_ordered_list(fileroot='observations',filetype='flt',use_old='yes',np=1)
     print('Of %d files, %d are old, and %d are new' % (len(lines),len(old_lines),len(new_lines)))
 
     #XXX add test for uniqueness
-    xlines=list(lines['File'])
-    xlines_unique=set(xlines)
-    xold=list(old_lines['File'])
-    xold_unique=set(xold)
-    xnew=list(new_lines['File'])
-    xnew_unique=set(xnew)
+    if len(lines)>0 and len(old_lines)>0 and len(new_lines)>0:
+        xlines=list(lines['File'])
+        xlines_unique=set(xlines)
+        xold=list(old_lines['File'])
+        xold_unique=set(xold)
+        xnew=list(new_lines['File'])
+        xnew_unique=set(xnew)
 
-    print('test1',len(xlines_unique),len(xold_unique),len(xnew_unique),len(xold_unique)+len(xnew_unique))
+        print('test1',len(xlines_unique),len(xold_unique),len(xnew_unique),len(xold_unique)+len(xnew_unique))
 
 
 
+    records=[]
     if len(new_lines)==0:
         pass
     elif np<=1 or len(new_lines)<np:
@@ -1335,17 +1340,14 @@ def read_ordered_list0(fileroot='observations'):
                 as a float
     '''
 
+    print('read_ordered_list0 is deprecated; replace with per_list.read_table')
+
     try:
-        x=Table.read(fileroot+'.ls',format='ascii.fixed_width_two_line')
-    except:
-        print('Error: read_ordered_list0: Could not open %s ' % (fileroot+'ls'))
+        x=read_table(fileroot+'.ls',format='fixed_width_two_line')
+    except Exception as e:
+        print('Error: read_ordered_list0: file %s description ' % (fileroot+'.ls',e))
         return []
 
-    if x['LineNo'].dtype.kind=='f':
-        xline=[]
-        for one in x['LineNo']:
-            xline.append('%05.3f' % one)
-        x.replace_column('LineNo',xline)
 
 
     return(x)
@@ -1363,7 +1365,7 @@ def read_ordered_list2(fileroot='observations',dataset='ibel01p4q',interval=[-1,
 
     # Read the entire file
 
-    x=read_ordered_list0(fileroot)
+    x=read_table(fileroot+'.ls')
 
 
     # Check the dataset name
@@ -1433,7 +1435,7 @@ def read_ordered_list(fileroot='observations',dataset='last',delta_time=24):
     '''
 
     # Read the entire file
-    x=read_ordered_list0(fileroot)
+    x=read_table(fileroot+'.ls')
 
 
     if dataset!='last':
@@ -1480,7 +1482,7 @@ def read_ordered_list_mjd(fileroot='observations',mjd_start=0,mjd_stop=0):
     101109    ksl    Coded and debugged
     '''
 
-    x=read_ordered_list0(fileroot)
+    x=read_table(fileroot+'.ls')
 
     nrec=len(x)
 
@@ -1517,14 +1519,9 @@ def read_ordered_list_progid(fileroot='observations',prog_id=11216,mjd_start=0,m
     '''
 
 
-    #xxOLD try:
-    #xxOLD     x=Table.read(fileroot+'.ls',format='ascii.fixed_width_two_line')
-    #xxOLD except:
-    #xxOLD     print('Error: read_ordered_list0: Could not open %s ' % (fileroot+'.ls'))
-    #xxOLD     return []
 
 
-    x=read_ordered_list0(fileroot)
+    x=read_table(fileroot+'.ls')
 
     if prog_id<=0:
         pass
