@@ -1238,16 +1238,18 @@ def make_ordered_list(fileroot='observations',filetype='flt',use_old='yes',np=1)
 
     print('Of %d files, %d are old, and %d are new' % (len(lines),len(old_lines),len(new_lines)))
 
-    #XXX add test for uniqueness
-    if len(lines)>0 and len(old_lines)>0 and len(new_lines)>0:
-        xlines=list(lines['File'])
-        xlines_unique=set(xlines)
-        xold=list(old_lines['File'])
-        xold_unique=set(xold)
-        xnew=list(new_lines['File'])
-        xnew_unique=set(xnew)
+    # XXX print out the lines
+    new_lines=lines[new]
 
-        print('test1',len(xlines_unique),len(xold_unique),len(xnew_unique),len(xold_unique)+len(xnew_unique))
+    print('lines')
+    lines.info()
+    print('new_lines')
+    new_lines.info()
+
+    new_lines.write('knew_lines.txt',format='ascii.fixed_width_two_line',overwrite=True)
+    lines.write('klines.txt',format='ascii.fixed_width_two_line',overwrite=True)
+
+
 
 
 
@@ -1265,7 +1267,8 @@ def make_ordered_list(fileroot='observations',filetype='flt',use_old='yes',np=1)
             imax=i+idelta
             if imax>len(new_lines):
                 imax=len(new_lines)
-            xinputs=lines[imin:imax]
+            # xinputs=lines[imin:imax]
+            xinputs=new_lines[imin:imax]
             print('test',imin,imax)
             inputs.append([xinputs,filetype])
             i=i+idelta
