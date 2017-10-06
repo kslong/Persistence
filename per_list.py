@@ -64,6 +64,8 @@ History (Recent):
             will not corrupt the obervations.sum file
 161130  ksl Remove pyraf dependencies because it is going away.
 161204  ksl Updated for python3, and to use astropy tables
+171006  ksl Fixed duplicate issue that arose because left joins
+            in astropy tables do not preserve table order
 
 '''
 
@@ -404,8 +406,6 @@ def check4duplicates(records):
         print('check4duplicates: There are no duplicates in the directory structure')
         return records
     else:
-        # XXX - Print the file 
-        records.write('knox.txt',format='ascii.fixed_width_two_line',overwrite=True)
         duplicate_names=[]
         hold_all=[]
         records2delete=[]
@@ -755,32 +755,6 @@ def make_sum_file(fileroot='observations',new='no'):
     summary_file=fileroot+'.sum'
 
 
-    # Create pristine file.  Note that x is the observations.ls file, and so
-    # The pristine file has all of the elements of the old file, but everything is set to unprocessed.
-
-    # g=x['Dataset','ProgID','ExpStart']
-    # g['Proc-Date']=proc_date
-    # g['Proc-Time']=proc_time
-    # g['ProcStat']='Unprocessed'
-    # g['E0.10']=-99.
-    # g['E0.03']=-99.
-    # g['E0.01']=-99.
-    # g['I0.10']=-99.
-    # g['I0.03']=-99.
-    # g['I0.01']=-99.
-    # g['PerHTML']='--'
-
-    # The next steps are necessary, whenever the an ascii table is
-    # read in, and there is a chance the updates will result in 
-    # strings which are longer than the current format.  Withot
-    # this the strings will be truncated in the ouput table
-    # for col in g.itercols():
-    #     if col.dtype.kind in 'SU':
-    #            g.replace_column(col.name, col.astype('object'))
-
-
-
-
     if os.path.exists(summary_file)==False or new=='yes':
         print('# Making a pristine summary file')
 
@@ -847,23 +821,6 @@ def make_sum_file(fileroot='observations',new='no'):
 
         xxxx.write('tmp.sum.txt',format='ascii.fixed_width_two_line',overwrite=True)
 
-
-        # j=0
-        # for one in g:
-        #     i=0
-
-        #   while i<len(xsum):
-        #       if xsum['Dataset'][i]==one['Dataset']:
-        #           g[j]=xsum[i]
-        #           break
-        #       i+=1
-        #   j=j+1
-        #   if j % 100 == 0:
-        #       print('Merged %d of %d records in to sum file' % (j,len(g)))
-
-        # g.write('tmp.sum.txt',format='ascii.fixed_width_two_line',overwrite=True)
-
-
         ndup=check_sum_file('tmp.sum.txt',summary_file)
 
         if ndup>0:
@@ -871,8 +828,6 @@ def make_sum_file(fileroot='observations',new='no'):
             return 'NOK  - Since there were duplicates in th tmp file, not moving to %s'  % (summary_file)
 
         # Now move the files around.  Note that the next 3 lines need to be the same as in update_summary above
-        # gmt=time.strftime("%y%m%d.%H%M", time.gmtime())  # Create a string to use to name the updated file. As written a new file a minute
-        # proc=subprocess.Popen('mv %s %s.%s.old' % (summary_file,summary_file,gmt),shell=True,stdout=subprocess.PIPE)
         backup(summary_file)
         proc=subprocess.Popen('mv %s %s' % ('tmp.sum.txt',summary_file),shell=True,stdout=subprocess.PIPE)
     return
@@ -1078,7 +1033,7 @@ def get_info(lines,filetype):
         else: 
             print('File %s does not really exist' %  xfile)
         i=i+1
-        if i%100 == 1:
+        if i%1000 == 1:
             print('Inspected %6d of %6d datasets --> %6d IR datasets' % (i,len(lines),len(dataset)))
 
     # Now put the results back into a table
@@ -1210,7 +1165,13 @@ def make_ordered_list(fileroot='observations',filetype='flt',use_old='yes',np=1)
 
     if use_old=='yes':
         xjoin=join(lines,obs_old,keys=['File'],join_type='left')
-        xjoin.write('foo.txt',format='ascii.fixed_width_two_line',overwrite=True)
+        # Put the files in the same order.  The join changes the order so this is important
+        xjoin.sort('File')
+        lines.sort('File')
+
+#        xjoin.write('xjoin.txt',format='ascii.fixed_width_two_line',overwrite=True)
+
+
         old=[]
         new=[]
         i=0
@@ -1221,37 +1182,21 @@ def make_ordered_list(fileroot='observations',filetype='flt',use_old='yes',np=1)
             else:
                 new.append(i)
             i+=1
+
+# At this point we have chosen whether this is an old or new file
+
         if len(old)>0:
             old_lines=xjoin[old]
             old_lines.rename_column('Mod-time_2','Mod-time')
             old_lines.remove_column('Mod-time_1')
-        if len(new)>0:
-            new_lines=xjoin[new]
-            new_lines.rename_column('Mod-time_1','Mod-time')
-            new_lines.remove_column('Mod-time_2')
-        else:
-            new_lines=[]
 
     #  At this point we know which files need to be read
     #  Note that an explicit assumption here is that the spt files have not changed
     #  Ignore this for now
 
-    print('Of %d files, %d are old, and %d are new' % (len(lines),len(old_lines),len(new_lines)))
-
-    # XXX print out the lines
     new_lines=lines[new]
 
-    print('lines')
-    lines.info()
-    print('new_lines')
-    new_lines.info()
-
-    new_lines.write('knew_lines.txt',format='ascii.fixed_width_two_line',overwrite=True)
-    lines.write('klines.txt',format='ascii.fixed_width_two_line',overwrite=True)
-
-
-
-
+    print('Of %d files, %d are old, and %d are new' % (len(lines),len(old_lines),len(new_lines)))
 
     records=[]
     if len(new_lines)==0:
@@ -1269,7 +1214,6 @@ def make_ordered_list(fileroot='observations',filetype='flt',use_old='yes',np=1)
                 imax=len(new_lines)
             # xinputs=lines[imin:imax]
             xinputs=new_lines[imin:imax]
-            print('test',imin,imax)
             inputs.append([xinputs,filetype])
             i=i+idelta
 
@@ -1291,7 +1235,7 @@ def make_ordered_list(fileroot='observations',filetype='flt',use_old='yes',np=1)
     
     # At this point, records contains all of the new_records
     print('Before stacking old records and new records', len(old_lines),len(new_lines))
-    # if len(old_lines)>0 and len(new_lines)>0:
+
     if len(old_lines)>0 and len(records)>0:
         records=vstack([old_lines,records])
     elif len(old_lines)>0:
@@ -1458,7 +1402,7 @@ def read_ordered_list(fileroot='observations',dataset='last',delta_time=24):
         ilast=len(x) - 1
         end_time=x['ExpStart'][ilast]
 
-    # Locate the first reciord we want
+    # Locate the first record we want
 
     if delta_time>0:
         delta_time=delta_time/24.
