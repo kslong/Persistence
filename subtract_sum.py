@@ -55,7 +55,7 @@ import date
 import os
 import per_list
 import numpy
-import xhtml
+import xhtml as html
 import pylab
 
 def link2file(link,word=''):

@@ -1137,7 +1137,7 @@ def make_ordered_list(fileroot='observations',filetype='flt',use_old='yes',np=1)
     lines=read_table('files.ls',format='no_header')
     lines.rename_column('col1','File')
 
-    # Get the MOdification date for all of the files
+    # Get the Modification date for all of the files
     mod_date=[]
     for one in lines:
         x=os.path.getmtime(one['File'])
@@ -1194,7 +1194,7 @@ def make_ordered_list(fileroot='observations',filetype='flt',use_old='yes',np=1)
     #  Note that an explicit assumption here is that the spt files have not changed
     #  Ignore this for now
 
-    new_lines=lines[new]
+        new_lines=lines[new]
 
     print('Of %d files, %d are old, and %d are new' % (len(lines),len(old_lines),len(new_lines)))
 
